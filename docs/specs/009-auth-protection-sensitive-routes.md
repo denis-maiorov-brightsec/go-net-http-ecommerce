@@ -8,6 +8,11 @@ Introduce baseline auth middleware and protect promotions routes.
 - Protect all promotions endpoints from unauthenticated access.
 - Keep products/categories/orders behavior unchanged unless explicitly required.
 
+## Go/net/http implementation notes
+- Implement auth as explicit stdlib middleware around `http.Handler`; do not add an auth framework.
+- The middleware should be injectable in tests so integration coverage can exercise authenticated and unauthenticated flows deterministically.
+- Scope route protection in `internal/api/` or the promotions HTTP wiring only; do not accidentally gate unrelated modules.
+
 ## Out of scope
 - Full identity provider integration.
 - Fine-grained RBAC/ABAC policy matrix.
@@ -19,4 +24,5 @@ Introduce baseline auth middleware and protect promotions routes.
 - Tests verify authenticated and unauthenticated paths.
 
 ## Verification
-- Integration/e2e tests with and without auth context.
+- Run `go test ./...`.
+- Run `go test -tags=integration ./...`.

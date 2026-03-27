@@ -8,6 +8,11 @@ Standardize request validation and error responses before ecommerce resource API
 - Add centralized error handling that normalizes all errors to one response shape.
 - Ensure request schema validation errors are mapped into structured `details`.
 
+## Go/net/http implementation notes
+- Implement validation and error writing in explicit helper/middleware packages under `internal/platform/`; do not rely on framework binding.
+- Decode request bodies with `encoding/json`, validate DTOs explicitly, and surface envelope writes from one shared path.
+- Keep the error contract independent from feature modules so products/categories/orders/promotions can reuse it without copy-paste.
+
 ## Out of scope
 - Request ID injection (added later in spec 011).
 - Request logging middleware.
@@ -40,3 +45,5 @@ Error response format:
   - Validation failure path
   - Not found path
   - Generic internal error mapping
+- Run `go test ./...`.
+- Run `go test -tags=integration ./...`.

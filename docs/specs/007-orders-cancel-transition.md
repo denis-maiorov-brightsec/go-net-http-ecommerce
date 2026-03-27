@@ -8,6 +8,11 @@ Support explicit order cancellation as a controlled state transition.
 - Enforce allowed transitions (for example: only `pending` -> `cancelled`).
 - Persist transition timestamp/audit fields if project conventions require.
 
+## Go/net/http implementation notes
+- Keep the endpoint as a plain `net/http` mutation route under the orders module.
+- Model transition checks in service/command code, not inline in the handler.
+- Persist transition updates atomically in PostgreSQL; use a transaction when the repository needs to update multiple tables or audit fields.
+
 ## Out of scope
 - Refund/payment side effects.
 - Event bus integrations.
@@ -19,4 +24,5 @@ Support explicit order cancellation as a controlled state transition.
 - Transition rules are covered by deterministic tests.
 
 ## Verification
-- Integration/e2e tests for valid and invalid transition scenarios.
+- Run `go test ./...`.
+- Run `go test -tags=integration ./...`.

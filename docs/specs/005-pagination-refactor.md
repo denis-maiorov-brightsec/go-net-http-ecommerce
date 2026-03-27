@@ -8,6 +8,11 @@ Consolidate list-query pagination behavior into a shared reusable helper.
 - Refactor `GET /v1/products` to use shared pagination helper.
 - Adopt stable default page/limit and max limit enforcement.
 
+## Go/net/http implementation notes
+- Put reusable pagination parsing/response helpers under `internal/platform/` rather than duplicating them per module.
+- Keep the helper HTTP-agnostic where practical: parse from query values, then let handlers apply it.
+- Refactor only products in this spec; do not preemptively change other list routes.
+
 ## Out of scope
 - Rewriting unrelated list routes not covered by this spec.
 
@@ -18,4 +23,5 @@ Consolidate list-query pagination behavior into a shared reusable helper.
 - Existing list behavior remains backward compatible where possible.
 
 ## Verification
-- Integration/e2e tests for valid/invalid pagination combinations.
+- Run `go test ./...`.
+- Run `go test -tags=integration ./...`.

@@ -11,6 +11,11 @@ Document stabilized API surface for products and orders.
 - Include examples for common request/response payloads.
 - Group by tags and version context (`v1`).
 
+## Go/net/http implementation notes
+- Serve the docs from the stdlib app, ideally from a checked-in artifact at `docs/openapi/openapi.json` plus a minimal `/docs` handler.
+- Keep docs generation and serving lightweight; do not introduce a framework solely for OpenAPI annotations.
+- Make sure products and orders schemas stay aligned with the live DTOs and envelope contract.
+
 ## Out of scope
 - Full documentation for every route group.
 - SDK generation.
@@ -28,3 +33,4 @@ Document stabilized API surface for products and orders.
 ## Verification
 - Manual check of generated docs UI/JSON.
 - Optional snapshot test for API docs stability.
+- Run `go test ./...`.

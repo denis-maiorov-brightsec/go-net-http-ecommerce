@@ -8,6 +8,11 @@ Improve observability with per-request correlation IDs and structured logs.
 - Include request ID in response headers.
 - Emit structured request logs with status, latency, method/path, and request ID.
 
+## Go/net/http implementation notes
+- Use stdlib middleware and `context.Context` propagation for the request ID.
+- Emit structured logs with `log/slog`.
+- Keep middleware reusable across all routes by placing it in `internal/platform/`.
+
 ## Out of scope
 - Full distributed tracing integration.
 - Log shipping pipeline setup.
@@ -19,4 +24,6 @@ Improve observability with per-request correlation IDs and structured logs.
 - Tests verify request ID propagation behavior.
 
 ## Verification
-- Integration tests plus manual request/response header checks.
+- Run `go test ./...`.
+- Run `go test -tags=integration ./...`.
+- Manual request/response header checks.

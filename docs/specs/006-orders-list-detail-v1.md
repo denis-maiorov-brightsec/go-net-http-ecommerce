@@ -13,6 +13,11 @@ Introduce order read endpoints with filtering support.
   - `status`
   - date range (`from`, `to`) or stack-equivalent query naming
 
+## Go/net/http implementation notes
+- Create `internal/orders/` with explicit read-path handler/service/repository code. The later `queries/commands` split is deferred to spec `014`.
+- Persist orders and line items in PostgreSQL and express list filtering through repository queries.
+- Reuse pagination and envelope helpers already introduced by earlier specs instead of adding order-specific variants.
+
 ## Out of scope
 - Order creation workflow.
 - Order cancellation transition (spec 007).
@@ -23,4 +28,5 @@ Introduce order read endpoints with filtering support.
 - Date filter validation uses spec 002 error envelope.
 
 ## Verification
-- Integration/e2e coverage for filtered list and missing detail paths.
+- Run `go test ./...`.
+- Run `go test -tags=integration ./...`.

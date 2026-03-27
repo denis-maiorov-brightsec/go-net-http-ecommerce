@@ -13,6 +13,11 @@ Introduce promotions management for ecommerce campaigns.
 - Promotion fields (minimum):
   - `id`, `name`, `code`, `discountType`, `discountValue`, `startsAt?`, `endsAt?`, `status`, `createdAt`, `updatedAt`
 
+## Go/net/http implementation notes
+- Create `internal/promotions/` with explicit HTTP, service, and repository packages.
+- Persist runtime behavior in PostgreSQL with migration-backed schema changes.
+- Keep date-window validation in DTO/service code and uniqueness enforcement deterministic across repository + HTTP error mapping.
+
 ## Out of scope
 - Promotion engine integration with checkout/order totals.
 
@@ -27,4 +32,5 @@ Introduce promotions management for ecommerce campaigns.
 - Integration tests cover duplicate code and invalid date-window scenarios.
 
 ## Verification
-- Run resource-specific and e2e tests.
+- Run `go test ./...`.
+- Run `go test -tags=integration ./...`.

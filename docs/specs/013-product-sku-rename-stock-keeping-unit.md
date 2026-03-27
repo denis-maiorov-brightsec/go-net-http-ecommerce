@@ -8,6 +8,11 @@ Introduce a realistic contract rename while preserving compatibility during tran
 - Accept deprecated request alias `sku` for backward compatibility.
 - Persist with canonical storage name according to stack/data-layer conventions.
 
+## Go/net/http implementation notes
+- Apply the rename across product DTOs, service logic, repository SQL, and docs/tests.
+- Keep the PostgreSQL schema and SQL aliases deterministic during the transition; use migrations where storage changes are required.
+- Do not leave both fields as independent canonical values in the codebase.
+
 ## Out of scope
 - Removing backward compatibility alias in this spec.
 - Renaming unrelated fields.
@@ -23,4 +28,5 @@ Introduce a realistic contract rename while preserving compatibility during tran
 - Tests cover canonical and alias behavior, including conflict/validation cases.
 
 ## Verification
-- Run products and search integration/e2e suites.
+- Run `go test ./...`.
+- Run `go test -tags=integration ./...`.

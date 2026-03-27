@@ -9,6 +9,11 @@ Introduce versioned routing so all new APIs live under `/v1`, while keeping a cl
 - Keep unversioned `GET /` temporarily, but mark it deprecated in behavior (message + deprecation header).
 - Update existing tests that currently expect unversioned baseline behavior.
 
+## Go/net/http implementation notes
+- Register the deprecated root route and `/v1` routes from `internal/api/` on the shared `*http.ServeMux`.
+- Keep handler logic explicit and stdlib-only; do not introduce a router framework.
+- Add HTTP-level coverage with `httptest`, including at least one integration-oriented test under `test/integration/`.
+
 ## Out of scope
 - Business resources (products/orders/categories/promotions).
 - API docs generation.
@@ -20,5 +25,6 @@ Introduce versioned routing so all new APIs live under `/v1`, while keeping a cl
 - E2E/integration test suite updated to match new behavior.
 
 ## Verification
-- Run stack-specific integration/e2e tests from `docs/STACK_PROFILE.md`.
+- Run `go test ./...`.
+- Run `go test -tags=integration ./...`.
 - Manual checks for `/v1/health` and `/`.

@@ -8,6 +8,11 @@ Apply a late-stage structural refactor to consolidate request DTO/schema definit
 - Update imports and wiring across products/orders/categories/promotions modules.
 - Keep runtime behavior unchanged.
 
+## Go/net/http implementation notes
+- Normalize request DTOs into `internal/<module>/dto/`.
+- Keep package names and imports explicit and idiomatic for Go; avoid framework binding tags that are not actually used.
+- The refactor should touch file layout and imports, not public JSON contracts.
+
 ## Out of scope
 - Contract changes to endpoints.
 - Business logic changes.
@@ -19,3 +24,7 @@ Apply a late-stage structural refactor to consolidate request DTO/schema definit
 
 ## Verification
 - Run full lint/type-check/test suite.
+- Run `go vet ./...`.
+- Run `XDG_CACHE_HOME=.cache ./bin/staticcheck ./...`.
+- Run `go test ./...`.
+- Run `go test -tags=integration ./...`.

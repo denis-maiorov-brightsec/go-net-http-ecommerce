@@ -14,6 +14,11 @@ Ship the first ecommerce resource route group with full CRUD and validation.
 - Product fields (initial contract):
   - `id`, `name`, `sku`, `price`, `status`, `categoryId?`, `createdAt`, `updatedAt`
 
+## Go/net/http implementation notes
+- Create the module under `internal/products/` with explicit `http/`, `service/`, and `repository/` packages.
+- Persist products in PostgreSQL via `pgx`; keep SQL in the repository package and add migrations in `db/migrations/`.
+- Keep request/response DTOs close to the module. They may move into `dto/` later when spec `017` requires that refactor.
+
 ## Out of scope
 - Shared pagination helper abstraction (spec 005).
 - Search endpoint (spec 012).
@@ -31,4 +36,5 @@ Ship the first ecommerce resource route group with full CRUD and validation.
 - Tests cover happy paths + key error cases (`400`, `404`).
 
 ## Verification
-- Run unit + integration/e2e tests for touched resource.
+- Run `go test ./...`.
+- Run `go test -tags=integration ./...`.

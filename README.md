@@ -1,23 +1,59 @@
-# E-commerce Spec-Driven Scaffold Template (Language/Framework Agnostic)
+# go-net-http-ecommerce
 
-This repository is a reusable template for building ecommerce backoffice APIs through iterative specs with Codex agents.
+This repository is a spec-driven ecommerce backoffice API scaffold built around bare-bones Go: `net/http`, `http.ServeMux`, PostgreSQL, `pgx`, plain SQL migrations, and explicit package boundaries.
 
-It is language/framework/ORM agnostic, keeps an ecommerce-focused spec progression, and drives execution from `docs/STACK_PROFILE.md`.
+The development flow stays spec-first. `docs/STACK_PROFILE.md` defines the stack and repo contract, `docs/SPECS_INDEX.md` defines the dependency order, and `docs/specs/*.md` define each increment of behavior.
 
-## What this template includes
+## Repository layout
 
-- `AGENTS.md`: execution protocol and guardrails for spec-by-spec implementation
-- `docs/STACK_PROFILE.md`: single place for stack/tooling choices and quality-gate commands (not API contracts)
-- `docs/SPECS_INDEX.md`: dependency-ordered backlog with statuses
-- `docs/specs/*.md`: implementation-agnostic spec seed set
-- `scripts/run-specs-harness.mjs`: implementer + reviewer two-pass automation harness
-- `prompts/*.md`: copy/paste prompts to adapt specs and scaffold a fresh project
+- `cmd/api/`: application entrypoint
+- `internal/api/`: top-level HTTP route wiring
+- `internal/platform/`: config, HTTP server, and PostgreSQL helpers
+- `db/migrations/`: SQL migration files
+- `test/integration/`: integration/e2e-oriented HTTP tests
+- `docs/`: stack profile, backlog, and per-spec requirements
+- `scripts/run-specs-harness.mjs`: spec automation harness
 
-## Expected usage
+## Local development
 
-1. Fill `docs/STACK_PROFILE.md` with your target stack, commands, and exact repository topology paths.
-2. Use `prompts/01-adapt-specs-and-scaffold.md` as the first Codex prompt.
-3. Run the harness per spec (or range).
+1. Copy `.env.example` to `.env` if you want local defaults.
+2. Start PostgreSQL:
+
+```bash
+docker compose up -d postgres
+```
+
+3. Run the API:
+
+```bash
+go run ./cmd/api
+```
+
+The baseline scaffold intentionally does not implement spec `001` yet. The server wiring, config, DB package, migration path, and tests are in place so the next spec pass can start from real code instead of placeholders.
+
+## Quality gates
+
+```bash
+gofmt -w $(find cmd internal test -name '*.go')
+go vet ./...
+go test ./...
+go test -tags=integration ./...
+XDG_CACHE_HOME=.cache ./bin/staticcheck ./...
+```
+
+Convenience targets are also available through `make`.
+
+## Local tools
+
+Install repo-local tooling:
+
+```bash
+make install-tools
+```
+
+This installs:
+- `./bin/staticcheck`
+- `./bin/migrate`
 
 ## Harness quick start
 

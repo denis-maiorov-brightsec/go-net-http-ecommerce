@@ -13,6 +13,11 @@ Harden products API with contract-style integration/e2e coverage after iterative
   - `GET /v1/search/products`
 - Assert response shapes, status codes, and key validation behaviors.
 
+## Go/net/http implementation notes
+- Keep contract coverage in `test/integration/` using real HTTP requests against the app handler/server.
+- Prefer seeded PostgreSQL-backed test data over repository mocks for these tests.
+- Assert on JSON shape and status behavior rather than internal implementation details.
+
 ## Out of scope
 - Consumer-driven pact tooling.
 - Contract tests for non-products route groups.
@@ -30,4 +35,4 @@ Harden products API with contract-style integration/e2e coverage after iterative
 - Existing baseline integration/e2e tests continue to pass.
 
 ## Verification
-- Run integration/e2e test command from stack profile.
+- Run `go test -tags=integration ./...`.

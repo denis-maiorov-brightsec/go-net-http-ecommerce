@@ -8,6 +8,11 @@ Protect write-heavy endpoints from abuse using basic rate limiting.
 - Keep read-only endpoints unaffected unless explicitly requested.
 - Standardize limit-exceeded response via spec 002 envelope.
 
+## Go/net/http implementation notes
+- Implement rate limiting as explicit middleware around write handlers only.
+- Keep configuration in the typed config package and make threshold behavior deterministic in tests.
+- Do not couple the limiter to a framework router or global mutable singleton that is hard to isolate in tests.
+
 ## Out of scope
 - Distributed/global rate limiting for multi-node deployments unless already required.
 
@@ -18,4 +23,5 @@ Protect write-heavy endpoints from abuse using basic rate limiting.
 - Tests validate threshold behavior deterministically.
 
 ## Verification
-- Integration tests for throttled and non-throttled paths.
+- Run `go test ./...`.
+- Run `go test -tags=integration ./...`.

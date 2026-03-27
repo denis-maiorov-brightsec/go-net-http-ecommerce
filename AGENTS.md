@@ -11,13 +11,20 @@ Target stack is defined in:
 - Backlog order and dependencies: `docs/SPECS_INDEX.md`
 - Single-task implementation details: `docs/specs/*.md`
 - Stack conventions and commands: `docs/STACK_PROFILE.md` (must not override spec behavior/contracts)
+- Repository topology baseline:
+  - app entrypoint: `cmd/api/`
+  - shared platform code: `internal/platform/`
+  - route wiring: `internal/api/`
+  - feature modules: `internal/<module>/...`
+  - SQL migrations: `db/migrations/`
+  - integration tests: `test/integration/`
 
 ## Execution protocol for every agent run
 1. Pick exactly one spec that is `Ready` (or unblocked by dependencies if statuses lag behind).
 2. Read the entire spec and its dependency list.
 3. Implement only that spec's scope.
 4. Follow stack constraints and repository topology contract from `docs/STACK_PROFILE.md`.
-5. Run relevant tests and lint for touched areas.
+5. Run `gofmt` on touched Go files, then run relevant tests and checks for touched areas.
 6. Update docs/tests required by the spec.
 7. Stop after completion criteria are met.
 
@@ -29,6 +36,11 @@ Target stack is defined in:
 - Implement persistence using the configured database + ORM/data layer from `docs/STACK_PROFILE.md` for all feature specs.
 - Do not introduce or keep in-memory repositories for runtime feature behavior unless the spec explicitly allows it.
 - Write tests against real persistence/integration boundaries when feasible; avoid mock-only feature coverage.
+- Use the standard library `net/http` stack directly; do not introduce HTTP frameworks.
+- Keep route registration on `*http.ServeMux` and keep handlers/services/repositories explicit instead of framework-style controllers.
+- Use PostgreSQL via `pgx/v5`; keep SQL in repository packages and use parameterized queries only.
+- Prefer co-located `*_test.go` unit tests plus HTTP/integration coverage in `test/integration/`.
+- Do not add top-level `pkg/`, `src/`, or `app/` trees.
 
 ## Definition of done (per spec)
 - All acceptance criteria from the target spec pass.

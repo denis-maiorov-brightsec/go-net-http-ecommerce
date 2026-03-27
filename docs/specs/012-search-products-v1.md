@@ -8,6 +8,11 @@ Add a lightweight product search endpoint that reuses products service/repositor
 - Search over product `name` and `sku` fields (case-insensitive contains by default).
 - Reuse existing products data layer to avoid duplicate query logic.
 
+## Go/net/http implementation notes
+- Wire the endpoint through `internal/products/` or a small `internal/search/` HTTP package, but reuse the existing products service/repository instead of cloning query code.
+- Implement search against PostgreSQL using deterministic ordering.
+- Keep validation for `q` aligned with the shared spec `002` envelope path.
+
 ## Out of scope
 - Full-text search engine integration.
 - Complex ranking and typo tolerance.
@@ -19,4 +24,5 @@ Add a lightweight product search endpoint that reuses products service/repositor
 - Tests cover matches/no-matches/validation error cases.
 
 ## Verification
-- Integration/e2e tests for search behavior and edge cases.
+- Run `go test ./...`.
+- Run `go test -tags=integration ./...`.
