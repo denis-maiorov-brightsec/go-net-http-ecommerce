@@ -26,7 +26,7 @@ This backlog is intentionally sequenced to mimic real ecommerce product work: fe
 | 014 | Refactor orders into `queries/commands` folders | 007 | Done |
 | 015 | Contract tests for products routes | 013 | Done |
 | 016 | OpenAPI annotations for products/orders | 007, 013 | Done |
-| 017 | Refactor request schemas into `/dto` folders and update imports | 016 | Blocked |
+| 017 | Refactor request schemas into `/dto` folders and update imports | 016 | Done |
 
 ## Parallelization guidance
 - Can run in parallel once deps are satisfied:

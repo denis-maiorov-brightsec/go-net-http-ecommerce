@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/categories"
+	categorydto "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/categories/dto"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/apierror"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/validation"
 )
@@ -77,7 +78,7 @@ func (h *Handler) getByID(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
-	var request createCategoryRequest
+	var request categorydto.CreateCategoryRequest
 	if err := validation.DecodeJSON(w, r, &request); err != nil {
 		return err
 	}
@@ -100,7 +101,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	var request updateCategoryRequest
+	var request categorydto.UpdateCategoryRequest
 	if err := validation.DecodeJSON(w, r, &request); err != nil {
 		return err
 	}

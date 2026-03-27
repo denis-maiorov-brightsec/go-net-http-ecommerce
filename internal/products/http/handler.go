@@ -9,6 +9,7 @@ import (
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/pagination"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/validation"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/products"
+	productdto "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/products/dto"
 )
 
 type writer interface {
@@ -109,12 +110,12 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
-	var request createProductRequest
+	var request productdto.CreateProductRequest
 	if err := validation.DecodeJSON(w, r, &request); err != nil {
 		return err
 	}
 
-	input, err := request.toCreateInput()
+	input, err := request.ToCreateInput()
 	if err != nil {
 		return err
 	}
@@ -133,12 +134,12 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	var request updateProductRequest
+	var request productdto.UpdateProductRequest
 	if err := validation.DecodeJSON(w, r, &request); err != nil {
 		return err
 	}
 
-	input, err := request.toUpdateInput()
+	input, err := request.ToUpdateInput()
 	if err != nil {
 		return err
 	}

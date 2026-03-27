@@ -26,48 +26,6 @@ type listPromotionsResponse struct {
 	Items []promotionResponse `json:"items"`
 }
 
-type createPromotionRequest struct {
-	Name          string     `json:"name"`
-	Code          string     `json:"code"`
-	DiscountType  string     `json:"discountType"`
-	DiscountValue float64    `json:"discountValue"`
-	StartsAt      *time.Time `json:"startsAt"`
-	EndsAt        *time.Time `json:"endsAt"`
-	Status        string     `json:"status"`
-}
-
-type updatePromotionRequest struct {
-	Name          *string      `json:"name"`
-	Code          *string      `json:"code"`
-	DiscountType  *string      `json:"discountType"`
-	DiscountValue *float64     `json:"discountValue"`
-	StartsAt      optionalTime `json:"startsAt"`
-	EndsAt        optionalTime `json:"endsAt"`
-	Status        *string      `json:"status"`
-}
-
-type optionalTime struct {
-	Set   bool
-	Value *time.Time
-}
-
-func (o *optionalTime) UnmarshalJSON(data []byte) error {
-	o.Set = true
-
-	if bytes.Equal(data, []byte("null")) {
-		o.Value = nil
-		return nil
-	}
-
-	var value time.Time
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-
-	o.Value = &value
-	return nil
-}
-
 func newPromotionResponse(promotion promotions.Promotion) promotionResponse {
 	return promotionResponse{
 		ID:            promotion.ID,

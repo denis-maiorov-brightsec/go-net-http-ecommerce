@@ -8,6 +8,7 @@ import (
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/apierror"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/validation"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/promotions"
+	promotiondto "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/promotions/dto"
 )
 
 type writer interface {
@@ -98,7 +99,7 @@ func (h *Handler) getByID(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
-	var request createPromotionRequest
+	var request promotiondto.CreatePromotionRequest
 	if err := validation.DecodeJSON(w, r, &request); err != nil {
 		return err
 	}
@@ -125,7 +126,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	var request updatePromotionRequest
+	var request promotiondto.UpdatePromotionRequest
 	if err := validation.DecodeJSON(w, r, &request); err != nil {
 		return err
 	}
