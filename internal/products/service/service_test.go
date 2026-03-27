@@ -65,6 +65,30 @@ func TestCreateValidatesRequiredFields(t *testing.T) {
 	}
 }
 
+func TestCreateUsesCanonicalStockKeepingUnitValidationField(t *testing.T) {
+	t.Parallel()
+
+	svc := New(repositoryStub{})
+
+	_, err := svc.Create(context.Background(), products.CreateInput{
+		Name:   "Desk",
+		Price:  129.99,
+		Status: "draft",
+	})
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+
+	var appErr *apierror.Error
+	if !errors.As(err, &appErr) {
+		t.Fatalf("expected api error, got %T", err)
+	}
+
+	if len(appErr.Details) == 0 || appErr.Details[0].Field != "stockKeepingUnit" {
+		t.Fatalf("expected stockKeepingUnit validation detail, got %#v", appErr.Details)
+	}
+}
+
 func TestUpdateRejectsEmptyPatch(t *testing.T) {
 	t.Parallel()
 
@@ -86,6 +110,27 @@ func TestUpdateRejectsEmptyPatch(t *testing.T) {
 
 	if len(appErr.Details) != 1 || appErr.Details[0].Field != "body" {
 		t.Fatalf("expected body validation detail, got %#v", appErr.Details)
+	}
+}
+
+func TestUpdateUsesCanonicalStockKeepingUnitValidationField(t *testing.T) {
+	t.Parallel()
+
+	svc := New(repositoryStub{})
+	value := ""
+
+	_, err := svc.Update(context.Background(), 1, products.UpdateInput{StockKeepingUnit: &value})
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+
+	var appErr *apierror.Error
+	if !errors.As(err, &appErr) {
+		t.Fatalf("expected api error, got %T", err)
+	}
+
+	if len(appErr.Details) == 0 || appErr.Details[0].Field != "stockKeepingUnit" {
+		t.Fatalf("expected stockKeepingUnit validation detail, got %#v", appErr.Details)
 	}
 }
 

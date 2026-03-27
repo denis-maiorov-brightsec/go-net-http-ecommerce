@@ -20,7 +20,7 @@ func TestProductsCRUDFlow(t *testing.T) {
 
 	createReq := httptest.NewRequest(http.MethodPost, "/v1/products", strings.NewReader(`{
 		"name":"Desk",
-		"sku":"SKU-100",
+		"stockKeepingUnit":"SKU-100",
 		"price":129.99,
 		"status":"draft"
 	}`))
@@ -38,7 +38,7 @@ func TestProductsCRUDFlow(t *testing.T) {
 	if created.ID == 0 {
 		t.Fatal("expected created product id to be set")
 	}
-	if created.Name != "Desk" || created.SKU != "SKU-100" || created.Status != "draft" {
+	if created.Name != "Desk" || created.StockKeepingUnit != "SKU-100" || created.Status != "draft" {
 		t.Fatalf("unexpected created product: %#v", created)
 	}
 	if created.Price != 129.99 {
@@ -47,6 +47,7 @@ func TestProductsCRUDFlow(t *testing.T) {
 	if created.CreatedAt == "" || created.UpdatedAt == "" {
 		t.Fatalf("expected timestamps to be set, got %#v", created)
 	}
+	assertResponseUsesCanonicalStockKeepingUnit(t, createRec.Body.String())
 
 	listReq := httptest.NewRequest(http.MethodGet, "/v1/products", nil)
 	listRec := httptest.NewRecorder()
@@ -132,7 +133,7 @@ func TestCreateProductValidationErrors(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/products", strings.NewReader(`{
 		"name":"",
-		"sku":"",
+		"stockKeepingUnit":"",
 		"price":0,
 		"status":""
 	}`))
@@ -188,7 +189,7 @@ func TestListProductsSupportsPagination(t *testing.T) {
 	for i, sku := range []string{"SKU-100", "SKU-101", "SKU-102"} {
 		req := httptest.NewRequest(http.MethodPost, "/v1/products", strings.NewReader(`{
 			"name":"Desk `+strconv.Itoa(i+1)+`",
-			"sku":"`+sku+`",
+			"stockKeepingUnit":"`+sku+`",
 			"price":129.99,
 			"status":"draft"
 		}`))
@@ -219,7 +220,7 @@ func TestListProductsSupportsPagination(t *testing.T) {
 	if body.Page != 2 || body.Limit != 2 || body.Total != 3 || body.TotalPages != 2 {
 		t.Fatalf("unexpected pagination metadata: %#v", body)
 	}
-	if body.Items[0].SKU != "SKU-102" {
+	if body.Items[0].StockKeepingUnit != "SKU-102" {
 		t.Fatalf("expected SKU-102, got %#v", body.Items[0])
 	}
 }
@@ -248,10 +249,10 @@ func TestSearchProductsReturnsDeterministicMatches(t *testing.T) {
 	router := api.NewRouter(*newIntegrationRouter(t))
 
 	for _, body := range []string{
-		`{"name":"beta chair","sku":"CHR-200","price":79.99,"status":"active"}`,
-		`{"name":"Alpha Desk","sku":"SKU-300","price":129.99,"status":"active"}`,
-		`{"name":"alpha lamp","sku":"LMP-100","price":39.99,"status":"draft"}`,
-		`{"name":"Monitor","sku":"SKU-100","price":219.99,"status":"active"}`,
+		`{"name":"beta chair","stockKeepingUnit":"CHR-200","price":79.99,"status":"active"}`,
+		`{"name":"Alpha Desk","stockKeepingUnit":"SKU-300","price":129.99,"status":"active"}`,
+		`{"name":"alpha lamp","stockKeepingUnit":"LMP-100","price":39.99,"status":"draft"}`,
+		`{"name":"Monitor","stockKeepingUnit":"SKU-100","price":219.99,"status":"active"}`,
 	} {
 		req := httptest.NewRequest(http.MethodPost, "/v1/products", strings.NewReader(body))
 		rec := httptest.NewRecorder()
@@ -279,11 +280,139 @@ func TestSearchProductsReturnsDeterministicMatches(t *testing.T) {
 		t.Fatalf("expected 2 matching products, got %d", len(body.Items))
 	}
 
-	if body.Items[0].Name != "Alpha Desk" || body.Items[0].SKU != "SKU-300" {
+	if body.Items[0].Name != "Alpha Desk" || body.Items[0].StockKeepingUnit != "SKU-300" {
 		t.Fatalf("unexpected first search result: %#v", body.Items[0])
 	}
-	if body.Items[1].Name != "Monitor" || body.Items[1].SKU != "SKU-100" {
+	if body.Items[1].Name != "Monitor" || body.Items[1].StockKeepingUnit != "SKU-100" {
 		t.Fatalf("unexpected second search result: %#v", body.Items[1])
+	}
+}
+
+func TestCreateProductAcceptsDeprecatedSKUAlias(t *testing.T) {
+	router := api.NewRouter(*newIntegrationRouter(t))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/products", strings.NewReader(`{
+		"name":"Desk",
+		"sku":"SKU-100",
+		"price":129.99,
+		"status":"draft"
+	}`))
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, rec.Code)
+	}
+
+	var created productResponse
+	decodeResponse(t, rec, &created)
+
+	if created.StockKeepingUnit != "SKU-100" {
+		t.Fatalf("expected stockKeepingUnit SKU-100, got %#v", created)
+	}
+	assertResponseUsesCanonicalStockKeepingUnit(t, rec.Body.String())
+}
+
+func TestPatchProductAcceptsDeprecatedSKUAlias(t *testing.T) {
+	router := api.NewRouter(*newIntegrationRouter(t))
+
+	createReq := httptest.NewRequest(http.MethodPost, "/v1/products", strings.NewReader(`{
+		"name":"Desk",
+		"stockKeepingUnit":"SKU-100",
+		"price":129.99,
+		"status":"draft"
+	}`))
+	createRec := httptest.NewRecorder()
+	router.ServeHTTP(createRec, createReq)
+
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, createRec.Code)
+	}
+
+	var created productResponse
+	decodeResponse(t, createRec, &created)
+
+	patchReq := httptest.NewRequest(http.MethodPatch, "/v1/products/"+int64Path(created.ID), strings.NewReader(`{
+		"sku":"SKU-101"
+	}`))
+	patchRec := httptest.NewRecorder()
+	router.ServeHTTP(patchRec, patchReq)
+
+	if patchRec.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, patchRec.Code)
+	}
+
+	var updated productResponse
+	decodeResponse(t, patchRec, &updated)
+
+	if updated.StockKeepingUnit != "SKU-101" {
+		t.Fatalf("expected stockKeepingUnit SKU-101, got %#v", updated)
+	}
+	assertResponseUsesCanonicalStockKeepingUnit(t, patchRec.Body.String())
+}
+
+func TestCreateProductRejectsConflictingStockKeepingUnitAndSKUAlias(t *testing.T) {
+	router := api.NewRouter(*newIntegrationRouter(t))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/products", strings.NewReader(`{
+		"name":"Desk",
+		"stockKeepingUnit":"SKU-100",
+		"sku":"SKU-101",
+		"price":129.99,
+		"status":"draft"
+	}`))
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, rec.Code)
+	}
+
+	var payload apierror.Envelope
+	decodeResponse(t, rec, &payload)
+
+	if len(payload.Error.Details) != 1 || payload.Error.Details[0].Field != "stockKeepingUnit" {
+		t.Fatalf("expected stockKeepingUnit conflict detail, got %#v", payload.Error.Details)
+	}
+}
+
+func TestPatchProductRejectsConflictingStockKeepingUnitAndSKUAlias(t *testing.T) {
+	router := api.NewRouter(*newIntegrationRouter(t))
+
+	createReq := httptest.NewRequest(http.MethodPost, "/v1/products", strings.NewReader(`{
+		"name":"Desk",
+		"stockKeepingUnit":"SKU-100",
+		"price":129.99,
+		"status":"draft"
+	}`))
+	createRec := httptest.NewRecorder()
+	router.ServeHTTP(createRec, createReq)
+
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, createRec.Code)
+	}
+
+	var created productResponse
+	decodeResponse(t, createRec, &created)
+
+	patchReq := httptest.NewRequest(http.MethodPatch, "/v1/products/"+int64Path(created.ID), strings.NewReader(`{
+		"stockKeepingUnit":"SKU-101",
+		"sku":"SKU-102"
+	}`))
+	patchRec := httptest.NewRecorder()
+	router.ServeHTTP(patchRec, patchReq)
+
+	if patchRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, patchRec.Code)
+	}
+
+	var payload apierror.Envelope
+	decodeResponse(t, patchRec, &payload)
+
+	if len(payload.Error.Details) != 1 || payload.Error.Details[0].Field != "stockKeepingUnit" {
+		t.Fatalf("expected stockKeepingUnit conflict detail, got %#v", payload.Error.Details)
 	}
 }
 
@@ -370,14 +499,14 @@ type listProductsResponse struct {
 }
 
 type productResponse struct {
-	ID         int64   `json:"id"`
-	Name       string  `json:"name"`
-	SKU        string  `json:"sku"`
-	Price      float64 `json:"price"`
-	Status     string  `json:"status"`
-	CategoryID *int64  `json:"categoryId"`
-	CreatedAt  string  `json:"createdAt"`
-	UpdatedAt  string  `json:"updatedAt"`
+	ID               int64   `json:"id"`
+	Name             string  `json:"name"`
+	StockKeepingUnit string  `json:"stockKeepingUnit"`
+	Price            float64 `json:"price"`
+	Status           string  `json:"status"`
+	CategoryID       *int64  `json:"categoryId"`
+	CreatedAt        string  `json:"createdAt"`
+	UpdatedAt        string  `json:"updatedAt"`
 }
 
 type searchProductsResponse struct {
@@ -398,4 +527,15 @@ func decodeResponse(t *testing.T, rec *httptest.ResponseRecorder, dst any) {
 
 func int64Path(value int64) string {
 	return strconv.FormatInt(value, 10)
+}
+
+func assertResponseUsesCanonicalStockKeepingUnit(t *testing.T, body string) {
+	t.Helper()
+
+	if !strings.Contains(body, `"stockKeepingUnit"`) {
+		t.Fatalf("expected stockKeepingUnit field in response body, got %s", body)
+	}
+	if strings.Contains(body, `"sku"`) {
+		t.Fatalf("expected deprecated sku field to be omitted from response body, got %s", body)
+	}
 }

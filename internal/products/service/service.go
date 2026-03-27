@@ -138,10 +138,10 @@ func validateCreateInput(input products.CreateInput) error {
 			Constraints: []string{"name must not be empty"},
 		})
 	}
-	if strings.TrimSpace(input.SKU) == "" {
+	if strings.TrimSpace(input.StockKeepingUnit) == "" {
 		details = append(details, apierror.Detail{
-			Field:       "sku",
-			Constraints: []string{"sku must not be empty"},
+			Field:       "stockKeepingUnit",
+			Constraints: []string{"stockKeepingUnit must not be empty"},
 		})
 	}
 	if input.Price <= 0 {
@@ -186,10 +186,10 @@ func validateUpdateInput(input products.UpdateInput) error {
 			Constraints: []string{"name must not be empty"},
 		})
 	}
-	if input.SKU != nil && strings.TrimSpace(*input.SKU) == "" {
+	if input.StockKeepingUnit != nil && strings.TrimSpace(*input.StockKeepingUnit) == "" {
 		details = append(details, apierror.Detail{
-			Field:       "sku",
-			Constraints: []string{"sku must not be empty"},
+			Field:       "stockKeepingUnit",
+			Constraints: []string{"stockKeepingUnit must not be empty"},
 		})
 	}
 	if input.Price != nil && *input.Price <= 0 {

@@ -35,7 +35,7 @@ func (r *Repository) List(ctx context.Context, input products.ListInput) (produc
 
 	var items []products.Product
 	if err := pgxscan.Select(ctx, r.db, &items, `
-		SELECT id, name, sku, price, status, category_id, created_at, updated_at
+		SELECT id, name, stock_keeping_unit, price, status, category_id, created_at, updated_at
 		FROM products
 		ORDER BY id ASC
 		LIMIT $1 OFFSET $2
@@ -56,10 +56,10 @@ func (r *Repository) Search(ctx context.Context, input products.SearchInput) ([]
 
 	var items []products.Product
 	if err := pgxscan.Select(ctx, r.db, &items, `
-		SELECT id, name, sku, price, status, category_id, created_at, updated_at
+		SELECT id, name, stock_keeping_unit, price, status, category_id, created_at, updated_at
 		FROM products
 		WHERE name ILIKE '%' || $1 || '%'
-			OR sku ILIKE '%' || $1 || '%'
+			OR stock_keeping_unit ILIKE '%' || $1 || '%'
 		ORDER BY LOWER(name) ASC, id ASC
 	`, input.Query); err != nil {
 		return nil, fmt.Errorf("search products: %w", err)
@@ -75,7 +75,7 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (products.Product, e
 
 	var item products.Product
 	if err := pgxscan.Get(ctx, r.db, &item, `
-		SELECT id, name, sku, price, status, category_id, created_at, updated_at
+		SELECT id, name, stock_keeping_unit, price, status, category_id, created_at, updated_at
 		FROM products
 		WHERE id = $1
 	`, id); err != nil {
@@ -96,10 +96,10 @@ func (r *Repository) Create(ctx context.Context, input products.CreateInput) (pr
 
 	var item products.Product
 	if err := pgxscan.Get(ctx, r.db, &item, `
-		INSERT INTO products (name, sku, price, status, category_id)
+		INSERT INTO products (name, stock_keeping_unit, price, status, category_id)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, name, sku, price, status, category_id, created_at, updated_at
-	`, input.Name, input.SKU, input.Price, input.Status, input.CategoryID); err != nil {
+		RETURNING id, name, stock_keeping_unit, price, status, category_id, created_at, updated_at
+	`, input.Name, input.StockKeepingUnit, input.Price, input.Status, input.CategoryID); err != nil {
 		return products.Product{}, fmt.Errorf("create product: %w", err)
 	}
 
@@ -118,9 +118,9 @@ func (r *Repository) Update(ctx context.Context, id int64, input products.Update
 		assignments = append(assignments, fmt.Sprintf("name = $%d", len(args)+1))
 		args = append(args, *input.Name)
 	}
-	if input.SKU != nil {
-		assignments = append(assignments, fmt.Sprintf("sku = $%d", len(args)+1))
-		args = append(args, *input.SKU)
+	if input.StockKeepingUnit != nil {
+		assignments = append(assignments, fmt.Sprintf("stock_keeping_unit = $%d", len(args)+1))
+		args = append(args, *input.StockKeepingUnit)
 	}
 	if input.Price != nil {
 		assignments = append(assignments, fmt.Sprintf("price = $%d", len(args)+1))
@@ -139,7 +139,7 @@ func (r *Repository) Update(ctx context.Context, id int64, input products.Update
 		UPDATE products
 		SET %s, updated_at = NOW()
 		WHERE id = $%d
-		RETURNING id, name, sku, price, status, category_id, created_at, updated_at
+		RETURNING id, name, stock_keeping_unit, price, status, category_id, created_at, updated_at
 	`, strings.Join(assignments, ", "), len(args)+1)
 	args = append(args, id)
 

@@ -114,13 +114,12 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	item, err := h.service.Create(r.Context(), products.CreateInput{
-		Name:       request.Name,
-		SKU:        request.SKU,
-		Price:      request.Price,
-		Status:     request.Status,
-		CategoryID: request.CategoryID,
-	})
+	input, err := request.toCreateInput()
+	if err != nil {
+		return err
+	}
+
+	item, err := h.service.Create(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -139,16 +138,12 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	item, err := h.service.Update(r.Context(), id, products.UpdateInput{
-		Name:   request.Name,
-		SKU:    request.SKU,
-		Price:  request.Price,
-		Status: request.Status,
-		CategoryID: products.OptionalInt64{
-			Set:   request.CategoryID.Set,
-			Value: request.CategoryID.Value,
-		},
-	})
+	input, err := request.toUpdateInput()
+	if err != nil {
+		return err
+	}
+
+	item, err := h.service.Update(r.Context(), id, input)
 	if err != nil {
 		return err
 	}
