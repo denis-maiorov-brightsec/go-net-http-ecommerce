@@ -10,7 +10,7 @@ This backlog is intentionally sequenced to mimic real ecommerce product work: fe
 ## Backlog
 | ID | Spec | Depends On | Status |
 |---|---|---|---|
-| 001 | API versioning baseline + deprecate unversioned root | - | Ready |
+| 001 | API versioning baseline + deprecate unversioned root | - | Done |
 | 002 | Global validation middleware + consistent error envelope | 001 | Blocked |
 | 003 | `/v1/products` CRUD | 002 | Blocked |
 | 004 | `/v1/categories` CRUD | 002 | Blocked |
