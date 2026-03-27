@@ -15,7 +15,7 @@ import (
 func TestPromotionsCRUDFlow(t *testing.T) {
 	router := api.NewRouter(*newIntegrationRouter(t))
 
-	createReq := httptest.NewRequest(http.MethodPost, "/v1/promotions", strings.NewReader(`{
+	createReq := promotionsRequest(http.MethodPost, "/v1/promotions", strings.NewReader(`{
 		"name":"Spring Sale",
 		"code":"SPRING-2026",
 		"discountType":"percentage",
@@ -23,7 +23,7 @@ func TestPromotionsCRUDFlow(t *testing.T) {
 		"startsAt":"2026-04-01T00:00:00Z",
 		"endsAt":"2026-04-30T23:59:59Z",
 		"status":"draft"
-	}`))
+	}`), "promotions-admin")
 	createRec := httptest.NewRecorder()
 
 	router.ServeHTTP(createRec, createReq)
@@ -45,7 +45,7 @@ func TestPromotionsCRUDFlow(t *testing.T) {
 		t.Fatalf("expected date window to be set, got %#v", created)
 	}
 
-	listReq := httptest.NewRequest(http.MethodGet, "/v1/promotions", nil)
+	listReq := promotionsRequest(http.MethodGet, "/v1/promotions", nil, "promotions-admin")
 	listRec := httptest.NewRecorder()
 
 	router.ServeHTTP(listRec, listReq)
@@ -61,7 +61,7 @@ func TestPromotionsCRUDFlow(t *testing.T) {
 		t.Fatalf("expected 1 promotion, got %d", len(listBody.Items))
 	}
 
-	getReq := httptest.NewRequest(http.MethodGet, "/v1/promotions/"+int64Path(created.ID), nil)
+	getReq := promotionsRequest(http.MethodGet, "/v1/promotions/"+int64Path(created.ID), nil, "promotions-admin")
 	getRec := httptest.NewRecorder()
 
 	router.ServeHTTP(getRec, getReq)
@@ -77,11 +77,11 @@ func TestPromotionsCRUDFlow(t *testing.T) {
 		t.Fatalf("expected id %d, got %d", created.ID, fetched.ID)
 	}
 
-	updateReq := httptest.NewRequest(http.MethodPatch, "/v1/promotions/"+int64Path(created.ID), strings.NewReader(`{
+	updateReq := promotionsRequest(http.MethodPatch, "/v1/promotions/"+int64Path(created.ID), strings.NewReader(`{
 		"discountValue":20,
 		"status":"active",
 		"endsAt":null
-	}`))
+	}`), "promotions-admin")
 	updateRec := httptest.NewRecorder()
 
 	router.ServeHTTP(updateRec, updateReq)
@@ -100,7 +100,7 @@ func TestPromotionsCRUDFlow(t *testing.T) {
 		t.Fatalf("expected endsAt to be cleared, got %#v", updated.EndsAt)
 	}
 
-	deleteReq := httptest.NewRequest(http.MethodDelete, "/v1/promotions/"+int64Path(created.ID), nil)
+	deleteReq := promotionsRequest(http.MethodDelete, "/v1/promotions/"+int64Path(created.ID), nil, "promotions-admin")
 	deleteRec := httptest.NewRecorder()
 
 	router.ServeHTTP(deleteRec, deleteReq)
@@ -109,7 +109,7 @@ func TestPromotionsCRUDFlow(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", http.StatusNoContent, deleteRec.Code)
 	}
 
-	missingReq := httptest.NewRequest(http.MethodGet, "/v1/promotions/"+int64Path(created.ID), nil)
+	missingReq := promotionsRequest(http.MethodGet, "/v1/promotions/"+int64Path(created.ID), nil, "promotions-admin")
 	missingRec := httptest.NewRecorder()
 
 	router.ServeHTTP(missingRec, missingReq)
@@ -128,7 +128,7 @@ func TestCreatePromotionRejectsDuplicateCode(t *testing.T) {
 		`{"name":"Spring Sale","code":"SPRING-2026","discountType":"percentage","discountValue":15,"status":"draft"}`,
 		`{"name":"Summer Sale","code":"SPRING-2026","discountType":"percentage","discountValue":10,"status":"draft"}`,
 	} {
-		req := httptest.NewRequest(http.MethodPost, "/v1/promotions", strings.NewReader(body))
+		req := promotionsRequest(http.MethodPost, "/v1/promotions", strings.NewReader(body), "promotions-admin")
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
 
@@ -150,7 +150,7 @@ func TestCreatePromotionRejectsDuplicateCode(t *testing.T) {
 func TestPromotionInvalidDateWindowReturnsValidationError(t *testing.T) {
 	router := api.NewRouter(*newIntegrationRouter(t))
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/promotions", strings.NewReader(`{
+	req := promotionsRequest(http.MethodPost, "/v1/promotions", strings.NewReader(`{
 		"name":"Spring Sale",
 		"code":"SPRING-2026",
 		"discountType":"percentage",
@@ -158,7 +158,7 @@ func TestPromotionInvalidDateWindowReturnsValidationError(t *testing.T) {
 		"startsAt":"2026-05-01T00:00:00Z",
 		"endsAt":"2026-04-01T00:00:00Z",
 		"status":"draft"
-	}`))
+	}`), "promotions-admin")
 	rec := httptest.NewRecorder()
 
 	router.ServeHTTP(rec, req)
@@ -178,14 +178,14 @@ func TestPromotionInvalidDateWindowReturnsValidationError(t *testing.T) {
 func TestPromotionPartialUpdateRejectsInvalidDateWindow(t *testing.T) {
 	router := api.NewRouter(*newIntegrationRouter(t))
 
-	createReq := httptest.NewRequest(http.MethodPost, "/v1/promotions", strings.NewReader(`{
+	createReq := promotionsRequest(http.MethodPost, "/v1/promotions", strings.NewReader(`{
 		"name":"Spring Sale",
 		"code":"SPRING-2026",
 		"discountType":"percentage",
 		"discountValue":15,
 		"endsAt":"2026-04-01T00:00:00Z",
 		"status":"draft"
-	}`))
+	}`), "promotions-admin")
 	createRec := httptest.NewRecorder()
 	router.ServeHTTP(createRec, createReq)
 	if createRec.Code != http.StatusCreated {
@@ -195,9 +195,9 @@ func TestPromotionPartialUpdateRejectsInvalidDateWindow(t *testing.T) {
 	var created promotionResponse
 	decodeResponse(t, createRec, &created)
 
-	updateReq := httptest.NewRequest(http.MethodPatch, "/v1/promotions/"+int64Path(created.ID), strings.NewReader(`{
+	updateReq := promotionsRequest(http.MethodPatch, "/v1/promotions/"+int64Path(created.ID), strings.NewReader(`{
 		"startsAt":"2026-05-01T00:00:00Z"
-	}`))
+	}`), "promotions-admin")
 	updateRec := httptest.NewRecorder()
 	router.ServeHTTP(updateRec, updateReq)
 
@@ -216,7 +216,7 @@ func TestPromotionPartialUpdateRejectsInvalidDateWindow(t *testing.T) {
 func TestDeleteMissingPromotionReturnsNotFound(t *testing.T) {
 	router := api.NewRouter(*newIntegrationRouter(t))
 
-	req := httptest.NewRequest(http.MethodDelete, "/v1/promotions/999", nil)
+	req := promotionsRequest(http.MethodDelete, "/v1/promotions/999", nil, "promotions-admin")
 	rec := httptest.NewRecorder()
 
 	router.ServeHTTP(rec, req)
@@ -226,6 +226,52 @@ func TestDeleteMissingPromotionReturnsNotFound(t *testing.T) {
 	}
 
 	assertIntegrationErrorEnvelope(t, rec, req.URL.Path, "NOT_FOUND", "Promotion not found")
+}
+
+func TestPromotionsRejectUnauthenticatedRequests(t *testing.T) {
+	router := api.NewRouter(*newIntegrationRouter(t))
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/promotions", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status %d, got %d", http.StatusUnauthorized, rec.Code)
+	}
+
+	assertIntegrationErrorEnvelope(t, rec, req.URL.Path, "UNAUTHORIZED", "Authentication required")
+}
+
+func TestPromotionsRejectAuthenticatedRequestsWithoutPermission(t *testing.T) {
+	router := api.NewRouter(*newIntegrationRouter(t))
+
+	req := promotionsRequest(http.MethodGet, "/v1/promotions", nil, "catalog-readonly")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected status %d, got %d", http.StatusForbidden, rec.Code)
+	}
+
+	assertIntegrationErrorEnvelope(t, rec, req.URL.Path, "FORBIDDEN", "Forbidden")
+}
+
+func promotionsRequest(method, path string, body *strings.Reader, token string) *http.Request {
+	var reader *strings.Reader
+	if body != nil {
+		reader = body
+	} else {
+		reader = strings.NewReader("")
+	}
+
+	req := httptest.NewRequest(method, path, reader)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	return req
 }
 
 type listPromotionsResponse struct {

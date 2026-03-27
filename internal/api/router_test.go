@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/apierror"
+	platformauth "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/auth"
 )
 
 func TestNewRouterServesVersionedHealth(t *testing.T) {
@@ -96,6 +97,42 @@ func TestNewRouterReturnsNotFoundForUnknownRoute(t *testing.T) {
 	}
 
 	assertRouterErrorEnvelope(t, rec, "/unknown", "NOT_FOUND", "Route not found")
+}
+
+func TestNewRouterProtectsPromotionsEndpoints(t *testing.T) {
+	t.Parallel()
+
+	router := NewRouter(Dependencies{
+		PromotionAuthenticator: platformauth.DefaultStubAuthenticator(),
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/promotions", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status %d, got %d", http.StatusUnauthorized, rec.Code)
+	}
+
+	assertRouterErrorEnvelope(t, rec, "/v1/promotions", "UNAUTHORIZED", "Authentication required")
+}
+
+func TestNewRouterLeavesNonProtectedEndpointsAccessible(t *testing.T) {
+	t.Parallel()
+
+	router := NewRouter(Dependencies{
+		PromotionAuthenticator: platformauth.DefaultStubAuthenticator(),
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/health", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
 }
 
 func TestWriteJSONReturnsEncodingErrorsThroughSharedEnvelope(t *testing.T) {

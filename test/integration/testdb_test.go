@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/api"
+	platformauth "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/auth"
 )
 
 const defaultIntegrationDatabaseURL = "postgres://postgres:postgres@localhost:5432/ecommerce?sslmode=disable"
@@ -32,7 +33,12 @@ func newIntegrationRouter(t *testing.T) *api.Dependencies {
 	pool := integrationDBPool(t)
 	resetIntegrationDatabase(t, pool)
 
-	return &api.Dependencies{DB: pool}
+	authenticator := platformauth.DefaultStubAuthenticator()
+
+	return &api.Dependencies{
+		DB:                     pool,
+		PromotionAuthenticator: authenticator,
+	}
 }
 
 func integrationDBPool(t *testing.T) *pgxpool.Pool {

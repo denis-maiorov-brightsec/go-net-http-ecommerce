@@ -33,11 +33,27 @@ func New(service Service) *Handler {
 }
 
 func (h *Handler) Register(mux *http.ServeMux) {
-	mux.Handle("GET /v1/promotions", apierror.Adapt(h.list))
-	mux.Handle("POST /v1/promotions", apierror.Adapt(h.create))
-	mux.Handle("GET /v1/promotions/{id}", apierror.Adapt(h.getByID))
-	mux.Handle("PATCH /v1/promotions/{id}", apierror.Adapt(h.update))
-	mux.Handle("DELETE /v1/promotions/{id}", apierror.Adapt(h.delete))
+	h.register(mux, nil)
+}
+
+func (h *Handler) RegisterProtected(mux *http.ServeMux, middleware func(http.Handler) http.Handler) {
+	h.register(mux, middleware)
+}
+
+func (h *Handler) register(mux *http.ServeMux, middleware func(http.Handler) http.Handler) {
+	mux.Handle("GET /v1/promotions", wrap(apierror.Adapt(h.list), middleware))
+	mux.Handle("POST /v1/promotions", wrap(apierror.Adapt(h.create), middleware))
+	mux.Handle("GET /v1/promotions/{id}", wrap(apierror.Adapt(h.getByID), middleware))
+	mux.Handle("PATCH /v1/promotions/{id}", wrap(apierror.Adapt(h.update), middleware))
+	mux.Handle("DELETE /v1/promotions/{id}", wrap(apierror.Adapt(h.delete), middleware))
+}
+
+func wrap(handler http.Handler, middleware func(http.Handler) http.Handler) http.Handler {
+	if middleware == nil {
+		return handler
+	}
+
+	return middleware(handler)
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {

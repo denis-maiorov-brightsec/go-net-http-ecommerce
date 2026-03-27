@@ -16,6 +16,7 @@ import (
 	ordersrepository "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/orders/repository"
 	ordersservice "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/orders/service"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/apierror"
+	platformauth "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/auth"
 	producthttp "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/products/http"
 	productsrepository "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/products/repository"
 	productsservice "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/products/service"
@@ -25,8 +26,9 @@ import (
 )
 
 type Dependencies struct {
-	Logger *slog.Logger
-	DB     *pgxpool.Pool
+	Logger                 *slog.Logger
+	DB                     *pgxpool.Pool
+	PromotionAuthenticator platformauth.Authenticator
 }
 
 type healthResponse struct {
@@ -43,6 +45,13 @@ func NewRouter(deps Dependencies) http.Handler {
 	orderHandler := ordershttp.New(ordersservice.New(ordersrepository.New(deps.DB)))
 	promotionHandler := promotionshttp.New(promotionsservice.New(promotionsrepository.New(deps.DB)))
 	productHandler := producthttp.New(productsservice.New(productsrepository.New(deps.DB)))
+	promotionAuth := deps.PromotionAuthenticator
+	if promotionAuth == nil {
+		stub := platformauth.DefaultStubAuthenticator()
+		promotionAuth = stub
+	}
+
+	promotionsGuard := platformauth.NewMiddleware(promotionAuth).Require(platformauth.ManagePromotionsPermission)
 
 	mux.Handle("GET /v1/health", apierror.Adapt(func(w http.ResponseWriter, r *http.Request) error {
 		return writeJSON(w, http.StatusOK, healthResponse{Status: "ok"})
@@ -55,7 +64,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	}))
 	categoryHandler.Register(mux)
 	orderHandler.Register(mux)
-	promotionHandler.Register(mux)
+	promotionHandler.RegisterProtected(mux, promotionsGuard)
 	productHandler.Register(mux)
 
 	return apierror.Recover(deps.Logger, apierror.NormalizeServeMux(mux))

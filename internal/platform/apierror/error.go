@@ -68,6 +68,14 @@ func Validation(details []Detail) *Error {
 	return New(http.StatusBadRequest, "VALIDATION_ERROR", "Request validation failed", details)
 }
 
+func Unauthorized(message string) *Error {
+	return New(http.StatusUnauthorized, "UNAUTHORIZED", message, nil)
+}
+
+func Forbidden(message string) *Error {
+	return New(http.StatusForbidden, "FORBIDDEN", message, nil)
+}
+
 func NotFound(message string) *Error {
 	return New(http.StatusNotFound, "NOT_FOUND", message, nil)
 }
