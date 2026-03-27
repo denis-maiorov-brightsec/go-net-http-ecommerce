@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/pagination"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/products"
 )
 
@@ -22,6 +23,7 @@ type productResponse struct {
 
 type listProductsResponse struct {
 	Items []productResponse `json:"items"`
+	pagination.Metadata
 }
 
 type createProductRequest struct {

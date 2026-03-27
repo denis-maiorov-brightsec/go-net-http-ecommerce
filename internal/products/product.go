@@ -13,6 +13,16 @@ type Product struct {
 	UpdatedAt  time.Time `db:"updated_at"`
 }
 
+type ListInput struct {
+	Page  int
+	Limit int
+}
+
+type ListResult struct {
+	Items []Product
+	Total int64
+}
+
 type CreateInput struct {
 	Name       string
 	SKU        string

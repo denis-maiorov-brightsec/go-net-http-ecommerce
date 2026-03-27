@@ -23,9 +23,14 @@ func New(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) List(ctx context.Context) ([]products.Product, error) {
+func (r *Repository) List(ctx context.Context, input products.ListInput) (products.ListResult, error) {
 	if r.db == nil {
-		return nil, fmt.Errorf("products repository is not configured")
+		return products.ListResult{}, fmt.Errorf("products repository is not configured")
+	}
+
+	var total int64
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM products`).Scan(&total); err != nil {
+		return products.ListResult{}, fmt.Errorf("count products: %w", err)
 	}
 
 	var items []products.Product
@@ -33,11 +38,15 @@ func (r *Repository) List(ctx context.Context) ([]products.Product, error) {
 		SELECT id, name, sku, price, status, category_id, created_at, updated_at
 		FROM products
 		ORDER BY id ASC
-	`); err != nil {
-		return nil, fmt.Errorf("list products: %w", err)
+		LIMIT $1 OFFSET $2
+	`, input.Limit, (input.Page-1)*input.Limit); err != nil {
+		return products.ListResult{}, fmt.Errorf("list products: %w", err)
 	}
 
-	return items, nil
+	return products.ListResult{
+		Items: items,
+		Total: total,
+	}, nil
 }
 
 func (r *Repository) GetByID(ctx context.Context, id int64) (products.Product, error) {

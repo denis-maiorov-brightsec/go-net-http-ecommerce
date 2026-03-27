@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/apierror"
+	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/pagination"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/validation"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/products"
 )
@@ -17,7 +18,7 @@ type writer interface {
 }
 
 type Service interface {
-	List(context.Context) ([]products.Product, error)
+	List(context.Context, products.ListInput) (products.ListResult, error)
 	GetByID(context.Context, int64) (products.Product, error)
 	Create(context.Context, products.CreateInput) (products.Product, error)
 	Update(context.Context, int64, products.UpdateInput) (products.Product, error)
@@ -41,17 +42,28 @@ func (h *Handler) Register(mux *http.ServeMux) {
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
-	items, err := h.service.List(r.Context())
+	params, err := pagination.Parse(r.URL.Query())
 	if err != nil {
 		return err
 	}
 
-	responseItems := make([]productResponse, 0, len(items))
-	for _, item := range items {
+	items, err := h.service.List(r.Context(), products.ListInput{
+		Page:  params.Page,
+		Limit: params.Limit,
+	})
+	if err != nil {
+		return err
+	}
+
+	responseItems := make([]productResponse, 0, len(items.Items))
+	for _, item := range items.Items {
 		responseItems = append(responseItems, newProductResponse(item))
 	}
 
-	return writeJSON(w, http.StatusOK, listProductsResponse{Items: responseItems})
+	return writeJSON(w, http.StatusOK, listProductsResponse{
+		Items:    responseItems,
+		Metadata: pagination.NewMetadata(params, items.Total),
+	})
 }
 
 func (h *Handler) getByID(w http.ResponseWriter, r *http.Request) error {

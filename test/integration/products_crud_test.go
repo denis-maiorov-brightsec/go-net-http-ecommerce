@@ -62,6 +62,9 @@ func TestProductsCRUDFlow(t *testing.T) {
 	if len(listBody.Items) != 1 {
 		t.Fatalf("expected 1 product, got %d", len(listBody.Items))
 	}
+	if listBody.Page != 1 || listBody.Limit != 20 || listBody.Total != 1 || listBody.TotalPages != 1 {
+		t.Fatalf("unexpected pagination metadata: %#v", listBody)
+	}
 
 	getReq := httptest.NewRequest(http.MethodGet, "/v1/products/"+int64Path(created.ID), nil)
 	getRec := httptest.NewRecorder()
@@ -178,8 +181,74 @@ func TestPatchProductValidationErrors(t *testing.T) {
 	assertIntegrationErrorEnvelope(t, rec, req.URL.Path, "VALIDATION_ERROR", "Request validation failed")
 }
 
+func TestListProductsSupportsPagination(t *testing.T) {
+	router := api.NewRouter(*newIntegrationRouter(t))
+
+	for i, sku := range []string{"SKU-100", "SKU-101", "SKU-102"} {
+		req := httptest.NewRequest(http.MethodPost, "/v1/products", strings.NewReader(`{
+			"name":"Desk `+strconv.Itoa(i+1)+`",
+			"sku":"`+sku+`",
+			"price":129.99,
+			"status":"draft"
+		}`))
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("expected status %d, got %d", http.StatusCreated, rec.Code)
+		}
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/products?page=2&limit=2", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var body listProductsResponse
+	decodeResponse(t, rec, &body)
+
+	if len(body.Items) != 1 {
+		t.Fatalf("expected 1 product on second page, got %d", len(body.Items))
+	}
+	if body.Page != 2 || body.Limit != 2 || body.Total != 3 || body.TotalPages != 2 {
+		t.Fatalf("unexpected pagination metadata: %#v", body)
+	}
+	if body.Items[0].SKU != "SKU-102" {
+		t.Fatalf("expected SKU-102, got %#v", body.Items[0])
+	}
+}
+
+func TestListProductsRejectsInvalidPagination(t *testing.T) {
+	router := api.NewRouter(*newIntegrationRouter(t))
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/products?page=0&limit=101", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, rec.Code)
+	}
+
+	var payload apierror.Envelope
+	decodeResponse(t, rec, &payload)
+
+	if len(payload.Error.Details) != 2 {
+		t.Fatalf("expected 2 validation details, got %d", len(payload.Error.Details))
+	}
+}
+
 type listProductsResponse struct {
-	Items []productResponse `json:"items"`
+	Items      []productResponse `json:"items"`
+	Page       int               `json:"page"`
+	Limit      int               `json:"limit"`
+	Total      int64             `json:"total"`
+	TotalPages int               `json:"totalPages"`
 }
 
 type productResponse struct {

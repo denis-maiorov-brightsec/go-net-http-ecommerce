@@ -16,8 +16,8 @@ type repositoryStub struct {
 	updateErr error
 }
 
-func (r repositoryStub) List(context.Context) ([]products.Product, error) {
-	return nil, nil
+func (r repositoryStub) List(context.Context, products.ListInput) (products.ListResult, error) {
+	return products.ListResult{}, nil
 }
 
 func (r repositoryStub) GetByID(context.Context, int64) (products.Product, error) {

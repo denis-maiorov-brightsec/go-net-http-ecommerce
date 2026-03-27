@@ -11,7 +11,7 @@ import (
 )
 
 type Repository interface {
-	List(context.Context) ([]products.Product, error)
+	List(context.Context, products.ListInput) (products.ListResult, error)
 	GetByID(context.Context, int64) (products.Product, error)
 	Create(context.Context, products.CreateInput) (products.Product, error)
 	Update(context.Context, int64, products.UpdateInput) (products.Product, error)
@@ -26,10 +26,10 @@ func New(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) List(ctx context.Context) ([]products.Product, error) {
-	items, err := s.repo.List(ctx)
+func (s *Service) List(ctx context.Context, input products.ListInput) (products.ListResult, error) {
+	items, err := s.repo.List(ctx, input)
 	if err != nil {
-		return nil, apierror.Internal(err)
+		return products.ListResult{}, apierror.Internal(err)
 	}
 
 	return items, nil
