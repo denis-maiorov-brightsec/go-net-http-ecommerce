@@ -2,6 +2,7 @@ package openapi
 
 import (
 	"encoding/json"
+	"slices"
 	"testing"
 )
 
@@ -64,5 +65,41 @@ func TestSpecDocumentsProductsAndOrdersSurface(t *testing.T) {
 
 	if deprecated, ok := sku["deprecated"].(bool); !ok || !deprecated {
 		t.Fatalf("expected sku to be marked deprecated, got %#v", sku["deprecated"])
+	}
+
+	orderSchema, ok := schemas["Order"].(map[string]any)
+	if !ok {
+		t.Fatal("expected Order schema")
+	}
+
+	orderProperties, ok := orderSchema["properties"].(map[string]any)
+	if !ok {
+		t.Fatal("expected Order properties")
+	}
+
+	statusProperty, ok := orderProperties["status"].(map[string]any)
+	if !ok {
+		t.Fatal("expected Order.status schema")
+	}
+
+	rawEnum, ok := statusProperty["enum"].([]any)
+	if !ok {
+		t.Fatal("expected Order.status enum")
+	}
+
+	enumValues := make([]string, 0, len(rawEnum))
+	for _, value := range rawEnum {
+		enumValue, ok := value.(string)
+		if !ok {
+			t.Fatalf("expected string enum value, got %#v", value)
+		}
+
+		enumValues = append(enumValues, enumValue)
+	}
+
+	for _, requiredStatus := range []string{"pending", "shipped", "cancelled"} {
+		if !slices.Contains(enumValues, requiredStatus) {
+			t.Fatalf("expected Order.status enum to include %q, got %#v", requiredStatus, enumValues)
+		}
 	}
 }
