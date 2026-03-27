@@ -175,6 +175,44 @@ func TestPromotionInvalidDateWindowReturnsValidationError(t *testing.T) {
 	}
 }
 
+func TestPromotionPartialUpdateRejectsInvalidDateWindow(t *testing.T) {
+	router := api.NewRouter(*newIntegrationRouter(t))
+
+	createReq := httptest.NewRequest(http.MethodPost, "/v1/promotions", strings.NewReader(`{
+		"name":"Spring Sale",
+		"code":"SPRING-2026",
+		"discountType":"percentage",
+		"discountValue":15,
+		"endsAt":"2026-04-01T00:00:00Z",
+		"status":"draft"
+	}`))
+	createRec := httptest.NewRecorder()
+	router.ServeHTTP(createRec, createReq)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, createRec.Code)
+	}
+
+	var created promotionResponse
+	decodeResponse(t, createRec, &created)
+
+	updateReq := httptest.NewRequest(http.MethodPatch, "/v1/promotions/"+int64Path(created.ID), strings.NewReader(`{
+		"startsAt":"2026-05-01T00:00:00Z"
+	}`))
+	updateRec := httptest.NewRecorder()
+	router.ServeHTTP(updateRec, updateReq)
+
+	if updateRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, updateRec.Code)
+	}
+
+	var payload apierror.Envelope
+	decodeResponse(t, updateRec, &payload)
+
+	if len(payload.Error.Details) != 1 || payload.Error.Details[0].Field != "startsAt" {
+		t.Fatalf("expected startsAt validation detail, got %#v", payload.Error.Details)
+	}
+}
+
 func TestDeleteMissingPromotionReturnsNotFound(t *testing.T) {
 	router := api.NewRouter(*newIntegrationRouter(t))
 

@@ -13,6 +13,7 @@ import (
 )
 
 type repositoryStub struct {
+	getItem   promotions.Promotion
 	getErr    error
 	createErr error
 	updateErr error
@@ -24,7 +25,11 @@ func (r repositoryStub) List(context.Context) ([]promotions.Promotion, error) {
 }
 
 func (r repositoryStub) GetByID(context.Context, int64) (promotions.Promotion, error) {
-	return promotions.Promotion{}, r.getErr
+	if r.getErr != nil {
+		return promotions.Promotion{}, r.getErr
+	}
+
+	return r.getItem, nil
 }
 
 func (r repositoryStub) Create(context.Context, promotions.CreateInput) (promotions.Promotion, error) {
@@ -149,6 +154,38 @@ func TestUpdateRejectsInvalidDateWindowWhenBothFieldsProvided(t *testing.T) {
 	_, err := svc.Update(context.Background(), 1, promotions.UpdateInput{
 		StartsAt: promotions.OptionalTime{Set: true, Value: &startsAt},
 		EndsAt:   promotions.OptionalTime{Set: true, Value: &endsAt},
+	})
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+
+	var appErr *apierror.Error
+	if !errors.As(err, &appErr) {
+		t.Fatalf("expected api error, got %T", err)
+	}
+
+	if len(appErr.Details) != 1 || appErr.Details[0].Field != "startsAt" {
+		t.Fatalf("expected startsAt validation detail, got %#v", appErr.Details)
+	}
+}
+
+func TestUpdateRejectsInvalidDateWindowAgainstStoredPromotion(t *testing.T) {
+	t.Parallel()
+
+	endsAt := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
+	startsAt := time.Date(2026, 4, 2, 12, 0, 0, 0, time.UTC)
+	svc := New(repositoryStub{
+		getItem: promotions.Promotion{
+			ID:     1,
+			EndsAt: &endsAt,
+			Status: "draft",
+			Name:   "Spring Sale",
+			Code:   "SPRING",
+		},
+	})
+
+	_, err := svc.Update(context.Background(), 1, promotions.UpdateInput{
+		StartsAt: promotions.OptionalTime{Set: true, Value: &startsAt},
 	})
 	if err == nil {
 		t.Fatal("expected validation error")

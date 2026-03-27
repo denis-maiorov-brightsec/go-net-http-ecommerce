@@ -75,7 +75,7 @@ func (s *Service) Update(ctx context.Context, id int64, input promotions.UpdateI
 		return promotions.Promotion{}, err
 	}
 
-	if err := validateUpdateInput(input); err != nil {
+	if err := validateUpdateInput(ctx, s.repo, id, input); err != nil {
 		return promotions.Promotion{}, err
 	}
 
@@ -164,7 +164,7 @@ func validateCreateInput(input promotions.CreateInput) error {
 	return nil
 }
 
-func validateUpdateInput(input promotions.UpdateInput) error {
+func validateUpdateInput(ctx context.Context, repo Repository, id int64, input promotions.UpdateInput) error {
 	if !input.HasUpdates() {
 		return apierror.Validation([]apierror.Detail{{
 			Field:       "body",
@@ -205,7 +205,10 @@ func validateUpdateInput(input promotions.UpdateInput) error {
 		})
 	}
 
-	startsAt, endsAt := currentDateWindow(input)
+	startsAt, endsAt, err := currentDateWindow(ctx, repo, id, input)
+	if err != nil {
+		return err
+	}
 	details = append(details, validateDateWindow(startsAt, endsAt)...)
 
 	if len(details) > 0 {
@@ -215,9 +218,26 @@ func validateUpdateInput(input promotions.UpdateInput) error {
 	return nil
 }
 
-func currentDateWindow(input promotions.UpdateInput) (*time.Time, *time.Time) {
-	var startsAt *time.Time
-	var endsAt *time.Time
+func currentDateWindow(ctx context.Context, repo Repository, id int64, input promotions.UpdateInput) (*time.Time, *time.Time, error) {
+	if input.StartsAt.Set && input.EndsAt.Set {
+		return input.StartsAt.Value, input.EndsAt.Value, nil
+	}
+
+	if !input.StartsAt.Set && !input.EndsAt.Set {
+		return nil, nil, nil
+	}
+
+	current, err := repo.GetByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, promotionsrepository.ErrNotFound) {
+			return nil, nil, apierror.NotFound("Promotion not found")
+		}
+
+		return nil, nil, apierror.Internal(err)
+	}
+
+	startsAt := current.StartsAt
+	endsAt := current.EndsAt
 
 	if input.StartsAt.Set {
 		startsAt = input.StartsAt.Value
@@ -226,11 +246,7 @@ func currentDateWindow(input promotions.UpdateInput) (*time.Time, *time.Time) {
 		endsAt = input.EndsAt.Value
 	}
 
-	if !input.StartsAt.Set || !input.EndsAt.Set {
-		return startsAt, endsAt
-	}
-
-	return startsAt, endsAt
+	return startsAt, endsAt, nil
 }
 
 func validateDateWindow(startsAt, endsAt *time.Time) []apierror.Detail {
