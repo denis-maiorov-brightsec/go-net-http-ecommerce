@@ -98,6 +98,29 @@ func TestNewRouterReturnsNotFoundForUnknownRoute(t *testing.T) {
 	assertRouterErrorEnvelope(t, rec, "/unknown", "NOT_FOUND", "Route not found")
 }
 
+func TestWriteJSONReturnsEncodingErrorsThroughSharedEnvelope(t *testing.T) {
+	t.Parallel()
+
+	handler := apierror.Adapt(func(w http.ResponseWriter, r *http.Request) error {
+		return writeJSON(w, http.StatusOK, struct {
+			Stream chan int `json:"stream"`
+		}{
+			Stream: make(chan int),
+		})
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/broken", nil)
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, rec.Code)
+	}
+
+	assertRouterErrorEnvelope(t, rec, "/v1/broken", "INTERNAL_SERVER_ERROR", "Internal server error")
+}
+
 func assertRouterErrorEnvelope(t *testing.T, rec *httptest.ResponseRecorder, path, code, message string) {
 	t.Helper()
 

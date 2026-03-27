@@ -1,7 +1,9 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -29,25 +31,26 @@ func NewRouter(deps Dependencies) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.Handle("GET /v1/health", apierror.Adapt(func(w http.ResponseWriter, r *http.Request) error {
-		writeJSON(w, http.StatusOK, healthResponse{Status: "ok"})
-		return nil
+		return writeJSON(w, http.StatusOK, healthResponse{Status: "ok"})
 	}))
 	mux.Handle("GET /{$}", apierror.Adapt(func(w http.ResponseWriter, r *http.Request) error {
 		w.Header().Set("Deprecation", "true")
-		writeJSON(w, http.StatusOK, deprecatedRootResponse{
+		return writeJSON(w, http.StatusOK, deprecatedRootResponse{
 			Message: "This unversioned root is deprecated. Migrate to /v1/health.",
 		})
-		return nil
 	}))
 
 	return apierror.Recover(deps.Logger, apierror.NormalizeServeMux(mux))
 }
 
-func writeJSON(w http.ResponseWriter, status int, payload any) {
+func writeJSON(w http.ResponseWriter, status int, payload any) error {
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(payload); err != nil {
+		return fmt.Errorf("encode json response: %w", err)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-
-	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-	}
+	_, err := w.Write(body.Bytes())
+	return err
 }
