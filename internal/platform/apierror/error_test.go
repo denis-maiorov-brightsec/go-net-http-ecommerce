@@ -92,6 +92,56 @@ func TestNormalizeServeMuxMapsMethodNotAllowedToEnvelope(t *testing.T) {
 	assertErrorEnvelope(t, rec, "/v1/health", "METHOD_NOT_ALLOWED", "Method not allowed", nil)
 }
 
+func TestNormalizeServeMuxPreservesPathValues(t *testing.T) {
+	t.Parallel()
+
+	mux := http.NewServeMux()
+	mux.Handle("GET /v1/products/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"` + r.PathValue("id") + `"}`))
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/products/42", nil)
+	rec := httptest.NewRecorder()
+
+	NormalizeServeMux(mux).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var payload struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if payload.ID != "42" {
+		t.Fatalf("expected path value %q, got %q", "42", payload.ID)
+	}
+}
+
+func TestNormalizeServeMuxPreservesApplicationNotFoundResponses(t *testing.T) {
+	t.Parallel()
+
+	mux := http.NewServeMux()
+	mux.Handle("GET /v1/products/{id}", Adapt(func(w http.ResponseWriter, r *http.Request) error {
+		return NotFound("Product not found")
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/products/42", nil)
+	rec := httptest.NewRecorder()
+
+	NormalizeServeMux(mux).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected status %d, got %d", http.StatusNotFound, rec.Code)
+	}
+
+	assertErrorEnvelope(t, rec, "/v1/products/42", "NOT_FOUND", "Product not found", nil)
+}
+
 func assertErrorEnvelope(t *testing.T, rec *httptest.ResponseRecorder, path, code, message string, details []Detail) {
 	t.Helper()
 

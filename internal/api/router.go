@@ -10,6 +10,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/apierror"
+	producthttp "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/products/http"
+	productsrepository "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/products/repository"
+	productsservice "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/products/service"
 )
 
 type Dependencies struct {
@@ -26,9 +29,8 @@ type deprecatedRootResponse struct {
 }
 
 func NewRouter(deps Dependencies) http.Handler {
-	_ = deps
-
 	mux := http.NewServeMux()
+	productHandler := producthttp.New(productsservice.New(productsrepository.New(deps.DB)))
 
 	mux.Handle("GET /v1/health", apierror.Adapt(func(w http.ResponseWriter, r *http.Request) error {
 		return writeJSON(w, http.StatusOK, healthResponse{Status: "ok"})
@@ -39,6 +41,7 @@ func NewRouter(deps Dependencies) http.Handler {
 			Message: "This unversioned root is deprecated. Migrate to /v1/health.",
 		})
 	}))
+	productHandler.Register(mux)
 
 	return apierror.Recover(deps.Logger, apierror.NormalizeServeMux(mux))
 }

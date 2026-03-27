@@ -7,19 +7,23 @@ import (
 
 func NormalizeServeMux(mux *http.ServeMux) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handler, pattern := mux.Handler(r)
-		if pattern != "" {
-			handler.ServeHTTP(w, r)
-			return
-		}
-
 		recorder := &responseRecorder{}
-		handler.ServeHTTP(recorder, r)
+		mux.ServeHTTP(recorder, r)
 
 		switch recorder.status {
 		case http.StatusNotFound:
+			if isApplicationResponse(recorder) {
+				recorder.FlushTo(w)
+				return
+			}
+
 			Write(w, r, NotFound("Route not found"))
 		case http.StatusMethodNotAllowed:
+			if isApplicationResponse(recorder) {
+				recorder.FlushTo(w)
+				return
+			}
+
 			if allow := recorder.header.Get("Allow"); allow != "" {
 				w.Header().Set("Allow", allow)
 			}
@@ -28,6 +32,14 @@ func NormalizeServeMux(mux *http.ServeMux) http.Handler {
 			recorder.FlushTo(w)
 		}
 	})
+}
+
+func isApplicationResponse(recorder *responseRecorder) bool {
+	if recorder == nil {
+		return false
+	}
+
+	return recorder.Header().Get("Content-Type") == "application/json"
 }
 
 type responseRecorder struct {

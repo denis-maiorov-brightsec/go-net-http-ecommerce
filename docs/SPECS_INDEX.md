@@ -12,7 +12,7 @@ This backlog is intentionally sequenced to mimic real ecommerce product work: fe
 |---|---|---|---|
 | 001 | API versioning baseline + deprecate unversioned root | - | Done |
 | 002 | Global validation middleware + consistent error envelope | 001 | Done |
-| 003 | `/v1/products` CRUD | 002 | Blocked |
+| 003 | `/v1/products` CRUD | 002 | Done |
 | 004 | `/v1/categories` CRUD | 002 | Blocked |
 | 005 | Shared pagination helper + products refactor | 003 | Blocked |
 | 006 | `/v1/orders` list + detail (status/date filters) | 002, 005 | Blocked |

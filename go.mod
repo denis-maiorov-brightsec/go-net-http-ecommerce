@@ -3,6 +3,7 @@ module github.com/denis-maiorov-brightsec/go-net-http-ecommerce
 go 1.24.0
 
 require (
+	github.com/georgysavva/scany/v2 v2.1.4
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/jackc/pgx/v5 v5.6.0
 )
