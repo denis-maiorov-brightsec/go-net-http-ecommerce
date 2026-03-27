@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ecommerce Backoffice API Docs</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4efe7;
+      --card: #fffaf2;
+      --ink: #1f2933;
+      --muted: #52606d;
+      --accent: #9f3a1d;
+      --border: #d9cbb7;
+      --code-bg: #f0e2cf;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+      background:
+        radial-gradient(circle at top right, rgba(159, 58, 29, 0.08), transparent 28rem),
+        linear-gradient(180deg, #fbf7f1 0%, var(--bg) 100%);
+      color: var(--ink);
+    }
+
+    main {
+      max-width: 70rem;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 4rem;
+    }
+
+    header {
+      margin-bottom: 2rem;
+    }
+
+    h1, h2, h3 {
+      font-family: "Avenir Next Condensed", "Franklin Gothic Medium", sans-serif;
+      letter-spacing: 0.02em;
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      line-height: 0.95;
+      margin-bottom: 0.75rem;
+    }
+
+    p {
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration-thickness: 0.08em;
+    }
+
+    .hero {
+      background: rgba(255, 250, 242, 0.82);
+      border: 1px solid var(--border);
+      border-radius: 1.5rem;
+      padding: 1.5rem;
+      box-shadow: 0 18px 40px rgba(31, 41, 51, 0.08);
+    }
+
+    .tag-group {
+      margin-top: 2rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .tag-title {
+      margin-bottom: 0.5rem;
+    }
+
+    .operation {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 10px 30px rgba(31, 41, 51, 0.06);
+    }
+
+    .operation-head {
+      display: flex;
+      gap: 0.75rem;
+      align-items: baseline;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+    }
+
+    .verb {
+      font: 700 0.9rem/1 "Avenir Next Condensed", "Franklin Gothic Medium", sans-serif;
+      color: white;
+      background: var(--accent);
+      border-radius: 999px;
+      padding: 0.25rem 0.6rem;
+      text-transform: uppercase;
+    }
+
+    code {
+      font-family: "SFMono-Regular", "Menlo", monospace;
+      background: var(--code-bg);
+      border-radius: 0.35rem;
+      padding: 0.1rem 0.35rem;
+    }
+
+    ul {
+      margin: 0.5rem 0 0;
+      padding-left: 1.25rem;
+      color: var(--muted);
+    }
+
+    .empty {
+      margin-top: 2rem;
+      padding: 1rem 1.25rem;
+      border-radius: 1rem;
+      border: 1px dashed var(--border);
+      background: rgba(255, 250, 242, 0.7);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="hero">
+      <h1>Ecommerce Backoffice API</h1>
+      <p>OpenAPI reference for the current <code>/v1</code> products and orders surface.</p>
+      <p><a href="/docs/openapi.json">Open raw OpenAPI JSON</a></p>
+    </header>
+    <section id="content" aria-live="polite">
+      <p>Loading API reference...</p>
+    </section>
+  </main>
+  <script>
+    const content = document.getElementById("content");
+
+    const methodOrder = ["get", "post", "patch", "delete"];
+
+    fetch("/docs/openapi.json")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("failed to load OpenAPI document");
+        }
+        return response.json();
+      })
+      .then((spec) => {
+        const grouped = new Map();
+        for (const [path, pathItem] of Object.entries(spec.paths || {})) {
+          for (const method of methodOrder) {
+            if (!pathItem[method]) {
+              continue;
+            }
+            const operation = pathItem[method];
+            const tags = operation.tags && operation.tags.length > 0 ? operation.tags : ["Other"];
+            for (const tag of tags) {
+              if (!grouped.has(tag)) {
+                grouped.set(tag, []);
+              }
+              grouped.get(tag).push({ method, path, operation });
+            }
+          }
+        }
+
+        if (grouped.size === 0) {
+          content.innerHTML = '<div class="empty">No operations were found in the OpenAPI document.</div>';
+          return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        for (const [tag, operations] of grouped.entries()) {
+          const section = document.createElement("section");
+          section.className = "tag-group";
+
+          const heading = document.createElement("h2");
+          heading.className = "tag-title";
+          heading.textContent = tag;
+          section.appendChild(heading);
+
+          operations.forEach(({ method, path, operation }) => {
+            const article = document.createElement("article");
+            article.className = "operation";
+
+            const head = document.createElement("div");
+            head.className = "operation-head";
+            head.innerHTML = '<span class="verb"></span><code></code>';
+            head.querySelector(".verb").textContent = method.toUpperCase();
+            head.querySelector("code").textContent = path;
+            article.appendChild(head);
+
+            const summary = document.createElement("h3");
+            summary.textContent = operation.summary || "Untitled operation";
+            article.appendChild(summary);
+
+            if (operation.description) {
+              const description = document.createElement("p");
+              description.textContent = operation.description;
+              article.appendChild(description);
+            }
+
+            const details = [];
+            if (operation.parameters && operation.parameters.length > 0) {
+              details.push("Parameters: " + operation.parameters.map((parameter) => parameter.name).join(", "));
+            }
+            if (operation.requestBody) {
+              details.push("Request body documented");
+            }
+            if (operation.responses) {
+              details.push("Responses: " + Object.keys(operation.responses).join(", "));
+            }
+
+            if (details.length > 0) {
+              const list = document.createElement("ul");
+              details.forEach((detail) => {
+                const item = document.createElement("li");
+                item.textContent = detail;
+                list.appendChild(item);
+              });
+              article.appendChild(list);
+            }
+
+            section.appendChild(article);
+          });
+
+          fragment.appendChild(section);
+        }
+
+        content.replaceChildren(fragment);
+      })
+      .catch((error) => {
+        content.innerHTML = '<div class="empty">Unable to load the OpenAPI document: ' + error.message + '</div>';
+      });
+  </script>
+</body>
+</html>

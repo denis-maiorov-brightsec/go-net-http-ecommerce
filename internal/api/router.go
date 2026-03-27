@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	apidocs "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/docs/openapi"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	categoryhttp "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/categories/http"
@@ -64,6 +65,8 @@ func NewRouter(deps Dependencies) http.Handler {
 	writeLimiter := ratelimit.New(defaultWriteRateLimitRequests(deps.WriteRateLimitRequests), defaultWriteRateLimitWindow(deps.WriteRateLimitWindow), deps.Now)
 	writeMiddleware := writeLimiter.Wrap
 
+	mux.HandleFunc("GET /docs", serveOpenAPIUI)
+	mux.HandleFunc("GET /docs/openapi.json", serveOpenAPISpec)
 	mux.Handle("GET /v1/health", apierror.Adapt(func(w http.ResponseWriter, r *http.Request) error {
 		return writeJSON(w, http.StatusOK, healthResponse{Status: "ok"})
 	}))
@@ -79,6 +82,16 @@ func NewRouter(deps Dependencies) http.Handler {
 	productHandler.RegisterWithWriteMiddleware(mux, writeMiddleware)
 
 	return requestlog.Middleware(deps.Logger, apierror.Recover(deps.Logger, apierror.NormalizeServeMux(mux)))
+}
+
+func serveOpenAPIUI(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(apidocs.UI())
+}
+
+func serveOpenAPISpec(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(apidocs.Spec())
 }
 
 func defaultWriteRateLimitRequests(limit int) int {

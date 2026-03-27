@@ -6,9 +6,11 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
+	apidocs "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/docs/openapi"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/apierror"
 	platformauth "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/auth"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/requestlog"
@@ -44,6 +46,51 @@ func TestNewRouterServesVersionedHealth(t *testing.T) {
 
 	if body.Status != "ok" {
 		t.Fatalf("expected status payload %q, got %q", "ok", body.Status)
+	}
+}
+
+func TestNewRouterServesOpenAPIDocsUI(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/docs", nil)
+	rec := httptest.NewRecorder()
+
+	NewRouter(Dependencies{}).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	if got := rec.Header().Get("Content-Type"); got != "text/html; charset=utf-8" {
+		t.Fatalf("expected Content-Type %q, got %q", "text/html; charset=utf-8", got)
+	}
+
+	body := rec.Body.String()
+	for _, needle := range []string{"/docs/openapi.json", "Ecommerce Backoffice API"} {
+		if !strings.Contains(body, needle) {
+			t.Fatalf("expected docs UI body to contain %q", needle)
+		}
+	}
+}
+
+func TestNewRouterServesOpenAPISpecJSON(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/docs/openapi.json", nil)
+	rec := httptest.NewRecorder()
+
+	NewRouter(Dependencies{}).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	if got := rec.Header().Get("Content-Type"); got != "application/json" {
+		t.Fatalf("expected Content-Type application/json, got %q", got)
+	}
+
+	if got := rec.Body.String(); got != string(apidocs.Spec()) {
+		t.Fatal("expected served spec to match embedded artifact")
 	}
 }
 

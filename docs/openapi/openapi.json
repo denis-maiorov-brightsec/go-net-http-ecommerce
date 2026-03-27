@@ -1,0 +1,969 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "go-net-http-ecommerce API",
+    "version": "v1",
+    "description": "OpenAPI reference for the stabilized /v1 products and orders API surface."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Current server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Products",
+      "description": "Product catalogue operations under /v1."
+    },
+    {
+      "name": "Orders",
+      "description": "Order read models and state transition operations under /v1."
+    }
+  ],
+  "paths": {
+    "/v1/products": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "List products",
+        "operationId": "listProducts",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated products list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductListResponse"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "items": [
+                        {
+                          "id": 101,
+                          "name": "Desk Lamp",
+                          "stockKeepingUnit": "LAM-001",
+                          "price": 49.99,
+                          "status": "active",
+                          "categoryId": 12,
+                          "createdAt": "2026-03-27T09:00:00Z",
+                          "updatedAt": "2026-03-27T09:00:00Z"
+                        }
+                      ],
+                      "page": 1,
+                      "limit": 20,
+                      "total": 1,
+                      "totalPages": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "Create product",
+        "operationId": "createProduct",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductRequest"
+              },
+              "examples": {
+                "stockKeepingUnit": {
+                  "value": {
+                    "name": "Desk Lamp",
+                    "stockKeepingUnit": "LAM-001",
+                    "price": 49.99,
+                    "status": "active",
+                    "categoryId": 12
+                  }
+                },
+                "deprecatedSkuAlias": {
+                  "summary": "Deprecated alias remains accepted",
+                  "value": {
+                    "name": "Desk Lamp",
+                    "sku": "LAM-001",
+                    "price": 49.99,
+                    "status": "active"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created product.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/v1/products/{id}": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "Get product by ID",
+        "operationId": "getProductByID",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProductID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product detail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/ProductNotFound"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "Update product",
+        "operationId": "updateProduct",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProductID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductRequest"
+              },
+              "examples": {
+                "rename": {
+                  "value": {
+                    "name": "Desk Lamp Pro",
+                    "stockKeepingUnit": "LAM-001-PRO"
+                  }
+                },
+                "clearCategory": {
+                  "value": {
+                    "categoryId": null
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated product.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/ProductNotFound"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "Delete product",
+        "operationId": "deleteProduct",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProductID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Product deleted."
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/ProductNotFound"
+          }
+        }
+      }
+    },
+    "/v1/search/products": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "Search products",
+        "operationId": "searchProducts",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductSearchResponse"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "items": [
+                        {
+                          "id": 101,
+                          "name": "Desk Lamp",
+                          "stockKeepingUnit": "LAM-001",
+                          "price": 49.99,
+                          "status": "active",
+                          "categoryId": 12,
+                          "createdAt": "2026-03-27T09:00:00Z",
+                          "updatedAt": "2026-03-27T09:00:00Z"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/v1/orders": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "List orders",
+        "operationId": "listOrders",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/OrderStatus"
+          },
+          {
+            "$ref": "#/components/parameters/OrderFrom"
+          },
+          {
+            "$ref": "#/components/parameters/OrderTo"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated orders list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderListResponse"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "items": [
+                        {
+                          "id": 501,
+                          "status": "pending",
+                          "customerId": 77,
+                          "createdAt": "2026-03-25T10:00:00Z",
+                          "updatedAt": "2026-03-25T10:00:00Z",
+                          "items": [
+                            {
+                              "id": 9001,
+                              "productId": 101,
+                              "productName": "Desk Lamp",
+                              "quantity": 2,
+                              "unitPrice": 49.99,
+                              "totalAmount": 99.98
+                            }
+                          ],
+                          "totalAmount": 99.98
+                        }
+                      ],
+                      "page": 1,
+                      "limit": 20,
+                      "total": 1,
+                      "totalPages": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/v1/orders/{id}": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "Get order by ID",
+        "operationId": "getOrderByID",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrderID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order detail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/OrderNotFound"
+          }
+        }
+      }
+    },
+    "/v1/orders/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "Cancel order",
+        "description": "State transition operation that cancels a pending order and returns the updated order resource.",
+        "operationId": "cancelOrder",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrderID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order cancelled successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                },
+                "examples": {
+                  "cancelled": {
+                    "value": {
+                      "id": 501,
+                      "status": "cancelled",
+                      "customerId": 77,
+                      "createdAt": "2026-03-25T10:00:00Z",
+                      "updatedAt": "2026-03-27T09:15:00Z",
+                      "items": [
+                        {
+                          "id": 9001,
+                          "productId": 101,
+                          "productName": "Desk Lamp",
+                          "quantity": 2,
+                          "unitPrice": 49.99,
+                          "totalAmount": 99.98
+                        }
+                      ],
+                      "totalAmount": 99.98
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/OrderNotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/OrderConflict"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "description": "Page number starting from 1.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "description": "Page size. Maximum 100.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "ProductID": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Positive product identifier.",
+        "schema": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1
+        }
+      },
+      "OrderID": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Positive order identifier.",
+        "schema": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1
+        }
+      },
+      "SearchQuery": {
+        "name": "q",
+        "in": "query",
+        "required": true,
+        "description": "Search query string.",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "OrderStatus": {
+        "name": "status",
+        "in": "query",
+        "description": "Optional order status filter.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "OrderFrom": {
+        "name": "from",
+        "in": "query",
+        "description": "Inclusive lower date bound in YYYY-MM-DD format.",
+        "schema": {
+          "type": "string",
+          "format": "date"
+        }
+      },
+      "OrderTo": {
+        "name": "to",
+        "in": "query",
+        "description": "Inclusive upper date bound in YYYY-MM-DD format.",
+        "schema": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    },
+    "responses": {
+      "ValidationError": {
+        "description": "Request validation failed.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "examples": {
+              "default": {
+                "value": {
+                  "timestamp": "2026-03-27T09:20:00.000Z",
+                  "path": "/v1/products",
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Request validation failed",
+                    "details": [
+                      {
+                        "field": "stockKeepingUnit",
+                        "constraints": [
+                          "stockKeepingUnit must not be empty"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ProductNotFound": {
+        "description": "Product was not found.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "examples": {
+              "default": {
+                "value": {
+                  "timestamp": "2026-03-27T09:20:00.000Z",
+                  "path": "/v1/products/999",
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Product not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "OrderNotFound": {
+        "description": "Order was not found.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "examples": {
+              "default": {
+                "value": {
+                  "timestamp": "2026-03-27T09:20:00.000Z",
+                  "path": "/v1/orders/999",
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Order not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "OrderConflict": {
+        "description": "Order could not be cancelled from its current status.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "examples": {
+              "default": {
+                "value": {
+                  "timestamp": "2026-03-27T09:20:00.000Z",
+                  "path": "/v1/orders/501/cancel",
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Order cannot be cancelled from current status"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Product": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "stockKeepingUnit",
+          "price",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "stockKeepingUnit": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number",
+            "format": "double"
+          },
+          "status": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateProductRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "price",
+          "status"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "stockKeepingUnit": {
+            "type": "string",
+            "description": "Preferred field name for the product SKU."
+          },
+          "sku": {
+            "type": "string",
+            "deprecated": true,
+            "description": "Deprecated alias for stockKeepingUnit. When both fields are present they must match."
+          },
+          "price": {
+            "type": "number",
+            "format": "double"
+          },
+          "status": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "stockKeepingUnit"
+            ]
+          },
+          {
+            "required": [
+              "sku"
+            ]
+          }
+        ]
+      },
+      "UpdateProductRequest": {
+        "type": "object",
+        "description": "Provide at least one updatable field.",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "stockKeepingUnit": {
+            "type": "string",
+            "description": "Preferred field name for the product SKU."
+          },
+          "sku": {
+            "type": "string",
+            "deprecated": true,
+            "description": "Deprecated alias for stockKeepingUnit. When both fields are present they must match."
+          },
+          "price": {
+            "type": "number",
+            "format": "double"
+          },
+          "status": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true,
+            "description": "Set to null to clear the category association."
+          }
+        }
+      },
+      "ProductListResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "limit",
+          "total",
+          "totalPages"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Product"
+            }
+          },
+          "page": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer"
+          }
+        }
+      },
+      "ProductSearchResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Product"
+            }
+          }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "customerId",
+          "createdAt",
+          "updatedAt",
+          "items",
+          "totalAmount"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "cancelled"
+            ]
+          },
+          "customerId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItem"
+            }
+          },
+          "totalAmount": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "OrderItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "productName",
+          "quantity",
+          "unitPrice",
+          "totalAmount"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "productId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "productName": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer"
+          },
+          "unitPrice": {
+            "type": "number",
+            "format": "double"
+          },
+          "totalAmount": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "OrderListResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "limit",
+          "total",
+          "totalPages"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          },
+          "page": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer"
+          }
+        }
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "required": [
+          "timestamp",
+          "path",
+          "error"
+        ],
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "path": {
+            "type": "string"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        }
+      },
+      "ErrorBody": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            }
+          }
+        }
+      },
+      "ErrorDetail": {
+        "type": "object",
+        "required": [
+          "field",
+          "constraints"
+        ],
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "constraints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

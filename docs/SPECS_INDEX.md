@@ -25,7 +25,7 @@ This backlog is intentionally sequenced to mimic real ecommerce product work: fe
 | 013 | Rename `product.sku` -> `product.stockKeepingUnit` | 003, 012 | Done |
 | 014 | Refactor orders into `queries/commands` folders | 007 | Done |
 | 015 | Contract tests for products routes | 013 | Done |
-| 016 | OpenAPI annotations for products/orders | 007, 013 | Blocked |
+| 016 | OpenAPI annotations for products/orders | 007, 013 | Done |
 | 017 | Refactor request schemas into `/dto` folders and update imports | 016 | Blocked |
 
 ## Parallelization guidance
