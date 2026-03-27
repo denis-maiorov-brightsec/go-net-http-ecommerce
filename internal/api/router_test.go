@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/apierror"
 )
 
 func TestNewRouterServesVersionedHealth(t *testing.T) {
@@ -77,6 +79,8 @@ func TestNewRouterDoesNotExposeUnversionedHealth(t *testing.T) {
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected status %d, got %d", http.StatusNotFound, rec.Code)
 	}
+
+	assertRouterErrorEnvelope(t, rec, "/health", "NOT_FOUND", "Route not found")
 }
 
 func TestNewRouterReturnsNotFoundForUnknownRoute(t *testing.T) {
@@ -89,5 +93,32 @@ func TestNewRouterReturnsNotFoundForUnknownRoute(t *testing.T) {
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected status %d, got %d", http.StatusNotFound, rec.Code)
+	}
+
+	assertRouterErrorEnvelope(t, rec, "/unknown", "NOT_FOUND", "Route not found")
+}
+
+func assertRouterErrorEnvelope(t *testing.T, rec *httptest.ResponseRecorder, path, code, message string) {
+	t.Helper()
+
+	if got := rec.Header().Get("Content-Type"); got != "application/json" {
+		t.Fatalf("expected Content-Type application/json, got %q", got)
+	}
+
+	var payload apierror.Envelope
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode error envelope: %v", err)
+	}
+
+	if payload.Path != path {
+		t.Fatalf("expected path %q, got %q", path, payload.Path)
+	}
+
+	if payload.Error.Code != code {
+		t.Fatalf("expected code %q, got %q", code, payload.Error.Code)
+	}
+
+	if payload.Error.Message != message {
+		t.Fatalf("expected message %q, got %q", message, payload.Error.Message)
 	}
 }
