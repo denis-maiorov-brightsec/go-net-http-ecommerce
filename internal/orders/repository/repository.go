@@ -14,6 +14,7 @@ import (
 )
 
 var ErrNotFound = errors.New("order not found")
+var ErrIneligibleStatus = errors.New("order status does not allow cancellation")
 
 type Repository struct {
 	db *pgxpool.Pool
@@ -88,6 +89,34 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (orders.Order, error
 	return item, nil
 }
 
+func (r *Repository) Cancel(ctx context.Context, id int64) (orders.Order, error) {
+	if r.db == nil {
+		return orders.Order{}, fmt.Errorf("orders repository is not configured")
+	}
+
+	var item orders.Order
+	if err := pgxscan.Get(ctx, r.db, &item, `
+		UPDATE orders
+		SET status = $2, updated_at = NOW()
+		WHERE id = $1 AND status = $3
+		RETURNING id, status, customer_id, created_at, updated_at, total_amount
+	`, id, orders.StatusCancelled, orders.StatusPending); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return orders.Order{}, r.cancelFailure(ctx, id)
+		}
+
+		return orders.Order{}, fmt.Errorf("cancel order: %w", err)
+	}
+
+	itemsByOrderID, err := r.listItemsByOrderIDs(ctx, []int64{id})
+	if err != nil {
+		return orders.Order{}, err
+	}
+	item.Items = itemsByOrderID[id]
+
+	return item, nil
+}
+
 func (r *Repository) loadItems(ctx context.Context, list []orders.Order) error {
 	if len(list) == 0 {
 		return nil
@@ -127,6 +156,19 @@ func (r *Repository) listItemsByOrderIDs(ctx context.Context, orderIDs []int64) 
 	}
 
 	return itemsByOrderID, nil
+}
+
+func (r *Repository) cancelFailure(ctx context.Context, id int64) error {
+	var status string
+	if err := r.db.QueryRow(ctx, `SELECT status FROM orders WHERE id = $1`, id).Scan(&status); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+
+		return fmt.Errorf("lookup order status for cancellation: %w", err)
+	}
+
+	return ErrIneligibleStatus
 }
 
 func buildFilters(input orders.ListInput) (string, []any) {

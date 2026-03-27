@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/api"
+	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/orders"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/apierror"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -158,6 +159,95 @@ func TestOrdersListRejectsInvalidDateFilters(t *testing.T) {
 
 	if len(payload.Error.Details) != 2 {
 		t.Fatalf("expected 2 validation details, got %d", len(payload.Error.Details))
+	}
+}
+
+func TestOrderCancelReturnsUpdatedOrderWhenPending(t *testing.T) {
+	routerDeps := newIntegrationRouter(t)
+	orderID := insertOrder(t, routerDeps.DB, orderFixture{
+		Status:     orders.StatusPending,
+		CustomerID: 501,
+		CreatedAt:  time.Date(2026, time.March, 1, 11, 0, 0, 0, time.UTC),
+		Items: []orderItemFixture{
+			{ProductName: "Monitor", Quantity: 1, UnitPrice: 220, TotalAmount: 220},
+		},
+	})
+
+	router := api.NewRouter(*routerDeps)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/orders/"+int64Path(orderID)+"/cancel", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var body orderResponse
+	decodeOrderResponse(t, rec, &body)
+
+	if body.ID != orderID {
+		t.Fatalf("expected id %d, got %d", orderID, body.ID)
+	}
+	if body.Status != orders.StatusCancelled {
+		t.Fatalf("expected status %q, got %q", orders.StatusCancelled, body.Status)
+	}
+	if len(body.Items) != 1 {
+		t.Fatalf("expected 1 order item, got %#v", body.Items)
+	}
+
+	var persistedStatus string
+	if err := routerDeps.DB.QueryRow(context.Background(), `SELECT status FROM orders WHERE id = $1`, orderID).Scan(&persistedStatus); err != nil {
+		t.Fatalf("load cancelled order: %v", err)
+	}
+	if persistedStatus != orders.StatusCancelled {
+		t.Fatalf("expected persisted status %q, got %q", orders.StatusCancelled, persistedStatus)
+	}
+}
+
+func TestOrderCancelReturnsNotFoundWhenMissing(t *testing.T) {
+	router := api.NewRouter(*newIntegrationRouter(t))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/orders/999/cancel", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected status %d, got %d", http.StatusNotFound, rec.Code)
+	}
+
+	assertIntegrationErrorEnvelope(t, rec, req.URL.Path, "NOT_FOUND", "Order not found")
+}
+
+func TestOrderCancelReturnsConflictForIneligibleStatus(t *testing.T) {
+	routerDeps := newIntegrationRouter(t)
+	orderID := insertOrder(t, routerDeps.DB, orderFixture{
+		Status:     "shipped",
+		CustomerID: 502,
+		CreatedAt:  time.Date(2026, time.March, 2, 12, 0, 0, 0, time.UTC),
+		Items: []orderItemFixture{
+			{ProductName: "Keyboard", Quantity: 1, UnitPrice: 80, TotalAmount: 80},
+		},
+	})
+
+	router := api.NewRouter(*routerDeps)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/orders/"+int64Path(orderID)+"/cancel", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected status %d, got %d", http.StatusConflict, rec.Code)
+	}
+
+	assertIntegrationErrorEnvelope(t, rec, req.URL.Path, "CONFLICT", "Order cannot be cancelled from current status")
+
+	var persistedStatus string
+	if err := routerDeps.DB.QueryRow(context.Background(), `SELECT status FROM orders WHERE id = $1`, orderID).Scan(&persistedStatus); err != nil {
+		t.Fatalf("load uncancelled order: %v", err)
+	}
+	if persistedStatus != "shipped" {
+		t.Fatalf("expected persisted status %q, got %q", "shipped", persistedStatus)
 	}
 }
 

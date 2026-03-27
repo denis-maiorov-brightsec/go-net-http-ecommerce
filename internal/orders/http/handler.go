@@ -22,6 +22,7 @@ type writer interface {
 type Service interface {
 	List(context.Context, orders.ListInput) (orders.ListResult, error)
 	GetByID(context.Context, int64) (orders.Order, error)
+	Cancel(context.Context, int64) (orders.Order, error)
 }
 
 type Handler struct {
@@ -35,6 +36,7 @@ func New(service Service) *Handler {
 func (h *Handler) Register(mux *http.ServeMux) {
 	mux.Handle("GET /v1/orders", apierror.Adapt(h.list))
 	mux.Handle("GET /v1/orders/{id}", apierror.Adapt(h.getByID))
+	mux.Handle("POST /v1/orders/{id}/cancel", apierror.Adapt(h.cancel))
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
@@ -77,6 +79,20 @@ func (h *Handler) getByID(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	item, err := h.service.GetByID(r.Context(), id)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, newOrderResponse(item))
+}
+
+func (h *Handler) cancel(w http.ResponseWriter, r *http.Request) error {
+	id, err := orderIDFromPath(r)
+	if err != nil {
+		return err
+	}
+
+	item, err := h.service.Cancel(r.Context(), id)
 	if err != nil {
 		return err
 	}

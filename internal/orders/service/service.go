@@ -13,6 +13,7 @@ import (
 type Repository interface {
 	List(context.Context, orders.ListInput) (orders.ListResult, error)
 	GetByID(context.Context, int64) (orders.Order, error)
+	Cancel(context.Context, int64) (orders.Order, error)
 }
 
 type Service struct {
@@ -45,6 +46,26 @@ func (s *Service) GetByID(ctx context.Context, id int64) (orders.Order, error) {
 	if err != nil {
 		if errors.Is(err, ordersrepository.ErrNotFound) {
 			return orders.Order{}, apierror.NotFound("Order not found")
+		}
+
+		return orders.Order{}, apierror.Internal(err)
+	}
+
+	return item, nil
+}
+
+func (s *Service) Cancel(ctx context.Context, id int64) (orders.Order, error) {
+	if err := validateID(id); err != nil {
+		return orders.Order{}, err
+	}
+
+	item, err := s.repo.Cancel(ctx, id)
+	if err != nil {
+		if errors.Is(err, ordersrepository.ErrNotFound) {
+			return orders.Order{}, apierror.NotFound("Order not found")
+		}
+		if errors.Is(err, ordersrepository.ErrIneligibleStatus) {
+			return orders.Order{}, apierror.New(409, "CONFLICT", "Order cannot be cancelled from current status", nil)
 		}
 
 		return orders.Order{}, apierror.Internal(err)

@@ -2,6 +2,11 @@ package orders
 
 import "time"
 
+const (
+	StatusPending   = "pending"
+	StatusCancelled = "cancelled"
+)
+
 type Order struct {
 	ID          int64     `db:"id"`
 	Status      string    `db:"status"`
