@@ -49,6 +49,25 @@ func (r *Repository) List(ctx context.Context, input products.ListInput) (produc
 	}, nil
 }
 
+func (r *Repository) Search(ctx context.Context, input products.SearchInput) ([]products.Product, error) {
+	if r.db == nil {
+		return nil, fmt.Errorf("products repository is not configured")
+	}
+
+	var items []products.Product
+	if err := pgxscan.Select(ctx, r.db, &items, `
+		SELECT id, name, sku, price, status, category_id, created_at, updated_at
+		FROM products
+		WHERE name ILIKE '%' || $1 || '%'
+			OR sku ILIKE '%' || $1 || '%'
+		ORDER BY LOWER(name) ASC, id ASC
+	`, input.Query); err != nil {
+		return nil, fmt.Errorf("search products: %w", err)
+	}
+
+	return items, nil
+}
+
 func (r *Repository) GetByID(ctx context.Context, id int64) (products.Product, error) {
 	if r.db == nil {
 		return products.Product{}, fmt.Errorf("products repository is not configured")

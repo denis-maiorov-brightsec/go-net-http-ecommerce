@@ -14,10 +14,15 @@ import (
 type repositoryStub struct {
 	getErr    error
 	updateErr error
+	searchErr error
 }
 
 func (r repositoryStub) List(context.Context, products.ListInput) (products.ListResult, error) {
 	return products.ListResult{}, nil
+}
+
+func (r repositoryStub) Search(context.Context, products.SearchInput) ([]products.Product, error) {
+	return nil, r.searchErr
 }
 
 func (r repositoryStub) GetByID(context.Context, int64) (products.Product, error) {
@@ -111,6 +116,50 @@ func TestUpdateMapsUnexpectedRepositoryErrorsToInternal(t *testing.T) {
 	svc := New(repositoryStub{updateErr: errors.New("db offline")})
 
 	_, err := svc.Update(context.Background(), 1, products.UpdateInput{Name: &name})
+	if err == nil {
+		t.Fatal("expected internal error")
+	}
+
+	var appErr *apierror.Error
+	if !errors.As(err, &appErr) {
+		t.Fatalf("expected api error, got %T", err)
+	}
+
+	if appErr.Status != http.StatusInternalServerError {
+		t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, appErr.Status)
+	}
+}
+
+func TestSearchRejectsBlankQuery(t *testing.T) {
+	t.Parallel()
+
+	svc := New(repositoryStub{})
+
+	_, err := svc.Search(context.Background(), products.SearchInput{Query: "   "})
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+
+	var appErr *apierror.Error
+	if !errors.As(err, &appErr) {
+		t.Fatalf("expected api error, got %T", err)
+	}
+
+	if appErr.Status != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, appErr.Status)
+	}
+
+	if len(appErr.Details) != 1 || appErr.Details[0].Field != "q" {
+		t.Fatalf("expected q validation detail, got %#v", appErr.Details)
+	}
+}
+
+func TestSearchMapsUnexpectedRepositoryErrorsToInternal(t *testing.T) {
+	t.Parallel()
+
+	svc := New(repositoryStub{searchErr: errors.New("db offline")})
+
+	_, err := svc.Search(context.Background(), products.SearchInput{Query: "desk"})
 	if err == nil {
 		t.Fatal("expected internal error")
 	}

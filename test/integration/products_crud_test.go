@@ -244,6 +244,93 @@ func TestListProductsRejectsInvalidPagination(t *testing.T) {
 	}
 }
 
+func TestSearchProductsReturnsDeterministicMatches(t *testing.T) {
+	router := api.NewRouter(*newIntegrationRouter(t))
+
+	for _, body := range []string{
+		`{"name":"beta chair","sku":"CHR-200","price":79.99,"status":"active"}`,
+		`{"name":"Alpha Desk","sku":"SKU-300","price":129.99,"status":"active"}`,
+		`{"name":"alpha lamp","sku":"LMP-100","price":39.99,"status":"draft"}`,
+		`{"name":"Monitor","sku":"SKU-100","price":219.99,"status":"active"}`,
+	} {
+		req := httptest.NewRequest(http.MethodPost, "/v1/products", strings.NewReader(body))
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("expected status %d, got %d", http.StatusCreated, rec.Code)
+		}
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/search/products?q=sku", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var body searchProductsResponse
+	decodeResponse(t, rec, &body)
+
+	if len(body.Items) != 2 {
+		t.Fatalf("expected 2 matching products, got %d", len(body.Items))
+	}
+
+	if body.Items[0].Name != "Alpha Desk" || body.Items[0].SKU != "SKU-300" {
+		t.Fatalf("unexpected first search result: %#v", body.Items[0])
+	}
+	if body.Items[1].Name != "Monitor" || body.Items[1].SKU != "SKU-100" {
+		t.Fatalf("unexpected second search result: %#v", body.Items[1])
+	}
+}
+
+func TestSearchProductsReturnsEmptyItemsWhenNoMatches(t *testing.T) {
+	router := api.NewRouter(*newIntegrationRouter(t))
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/search/products?q=missing", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var body searchProductsResponse
+	decodeResponse(t, rec, &body)
+
+	if len(body.Items) != 0 {
+		t.Fatalf("expected no search results, got %d", len(body.Items))
+	}
+}
+
+func TestSearchProductsRequiresQuery(t *testing.T) {
+	router := api.NewRouter(*newIntegrationRouter(t))
+
+	for _, path := range []string{"/v1/search/products", "/v1/search/products?q=%20%20%20"} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("expected status %d, got %d for %s", http.StatusBadRequest, rec.Code, path)
+		}
+
+		assertIntegrationErrorEnvelope(t, rec, req.URL.Path, "VALIDATION_ERROR", "Request validation failed")
+
+		var payload apierror.Envelope
+		decodeResponse(t, rec, &payload)
+
+		if len(payload.Error.Details) != 1 || payload.Error.Details[0].Field != "q" {
+			t.Fatalf("expected q validation detail for %s, got %#v", path, payload.Error.Details)
+		}
+	}
+}
+
 func TestProductWriteRoutesReturnRateLimitExceeded(t *testing.T) {
 	router := api.NewRouter(*newIntegrationRouterWithRateLimit(t, 1, time.Minute))
 
@@ -291,6 +378,10 @@ type productResponse struct {
 	CategoryID *int64  `json:"categoryId"`
 	CreatedAt  string  `json:"createdAt"`
 	UpdatedAt  string  `json:"updatedAt"`
+}
+
+type searchProductsResponse struct {
+	Items []productResponse `json:"items"`
 }
 
 func decodeResponse(t *testing.T, rec *httptest.ResponseRecorder, dst any) {

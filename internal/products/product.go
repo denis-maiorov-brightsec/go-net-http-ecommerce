@@ -23,6 +23,10 @@ type ListResult struct {
 	Total int64
 }
 
+type SearchInput struct {
+	Query string
+}
+
 type CreateInput struct {
 	Name       string
 	SKU        string

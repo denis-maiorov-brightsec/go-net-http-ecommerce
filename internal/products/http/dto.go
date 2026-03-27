@@ -26,6 +26,10 @@ type listProductsResponse struct {
 	pagination.Metadata
 }
 
+type searchProductsResponse struct {
+	Items []productResponse `json:"items"`
+}
+
 type createProductRequest struct {
 	Name       string  `json:"name"`
 	SKU        string  `json:"sku"`

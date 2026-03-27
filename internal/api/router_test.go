@@ -205,6 +205,35 @@ func TestNewRouterAppliesRateLimitToWriteRoutesOnly(t *testing.T) {
 	}
 }
 
+func TestNewRouterLeavesProductSearchOutsideWriteRateLimit(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, time.March, 27, 12, 0, 0, 0, time.UTC)
+	router := NewRouter(Dependencies{
+		WriteRateLimitRequests: 1,
+		WriteRateLimitWindow:   time.Minute,
+		Now:                    func() time.Time { return now },
+	})
+
+	firstWrite := httptest.NewRequest(http.MethodPost, "/v1/products", nil)
+	firstWrite.RemoteAddr = "192.0.2.1:1234"
+	firstWriteRec := httptest.NewRecorder()
+	router.ServeHTTP(firstWriteRec, firstWrite)
+
+	if firstWriteRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected first write status %d, got %d", http.StatusBadRequest, firstWriteRec.Code)
+	}
+
+	searchReq := httptest.NewRequest(http.MethodGet, "/v1/search/products", nil)
+	searchReq.RemoteAddr = "192.0.2.1:1234"
+	searchRec := httptest.NewRecorder()
+	router.ServeHTTP(searchRec, searchReq)
+
+	if searchRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected search status %d, got %d", http.StatusBadRequest, searchRec.Code)
+	}
+}
+
 func TestNewRouterPreservesPromotionAuthBeforeRateLimit(t *testing.T) {
 	t.Parallel()
 

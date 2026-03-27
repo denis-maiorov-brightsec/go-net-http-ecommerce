@@ -12,6 +12,7 @@ import (
 
 type Repository interface {
 	List(context.Context, products.ListInput) (products.ListResult, error)
+	Search(context.Context, products.SearchInput) ([]products.Product, error)
 	GetByID(context.Context, int64) (products.Product, error)
 	Create(context.Context, products.CreateInput) (products.Product, error)
 	Update(context.Context, int64, products.UpdateInput) (products.Product, error)
@@ -30,6 +31,21 @@ func (s *Service) List(ctx context.Context, input products.ListInput) (products.
 	items, err := s.repo.List(ctx, input)
 	if err != nil {
 		return products.ListResult{}, apierror.Internal(err)
+	}
+
+	return items, nil
+}
+
+func (s *Service) Search(ctx context.Context, input products.SearchInput) ([]products.Product, error) {
+	if err := validateSearchInput(input); err != nil {
+		return nil, err
+	}
+
+	items, err := s.repo.Search(ctx, products.SearchInput{
+		Query: strings.TrimSpace(input.Query),
+	})
+	if err != nil {
+		return nil, apierror.Internal(err)
 	}
 
 	return items, nil
@@ -197,6 +213,17 @@ func validateUpdateInput(input products.UpdateInput) error {
 
 	if len(details) > 0 {
 		return apierror.Validation(details)
+	}
+
+	return nil
+}
+
+func validateSearchInput(input products.SearchInput) error {
+	if strings.TrimSpace(input.Query) == "" {
+		return apierror.Validation([]apierror.Detail{{
+			Field:       "q",
+			Constraints: []string{"q must not be empty"},
+		}})
 	}
 
 	return nil

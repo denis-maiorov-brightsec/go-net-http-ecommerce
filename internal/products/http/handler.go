@@ -19,6 +19,7 @@ type writer interface {
 
 type Service interface {
 	List(context.Context, products.ListInput) (products.ListResult, error)
+	Search(context.Context, products.SearchInput) ([]products.Product, error)
 	GetByID(context.Context, int64) (products.Product, error)
 	Create(context.Context, products.CreateInput) (products.Product, error)
 	Update(context.Context, int64, products.UpdateInput) (products.Product, error)
@@ -43,6 +44,7 @@ func (h *Handler) RegisterWithWriteMiddleware(mux *http.ServeMux, middleware fun
 
 func (h *Handler) register(mux *http.ServeMux, writeMiddleware func(http.Handler) http.Handler) {
 	mux.Handle("GET /v1/products", apierror.Adapt(h.list))
+	mux.Handle("GET /v1/search/products", apierror.Adapt(h.search))
 	mux.Handle("POST /v1/products", wrap(apierror.Adapt(h.create), writeMiddleware))
 	mux.Handle("GET /v1/products/{id}", apierror.Adapt(h.getByID))
 	mux.Handle("PATCH /v1/products/{id}", wrap(apierror.Adapt(h.update), writeMiddleware))
@@ -86,6 +88,24 @@ func (h *Handler) getByID(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	return writeJSON(w, http.StatusOK, newProductResponse(item))
+}
+
+func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
+	items, err := h.service.Search(r.Context(), products.SearchInput{
+		Query: r.URL.Query().Get("q"),
+	})
+	if err != nil {
+		return err
+	}
+
+	responseItems := make([]productResponse, 0, len(items))
+	for _, item := range items {
+		responseItems = append(responseItems, newProductResponse(item))
+	}
+
+	return writeJSON(w, http.StatusOK, searchProductsResponse{
+		Items: responseItems,
+	})
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
