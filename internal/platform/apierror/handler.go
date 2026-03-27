@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+
+	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/requestlog"
 )
 
 type HandlerFunc func(http.ResponseWriter, *http.Request) error
@@ -21,7 +23,11 @@ func Recover(logger *slog.Logger, next http.Handler) http.Handler {
 		defer func() {
 			if recovered := recover(); recovered != nil {
 				if logger != nil {
-					logger.Error("recovered panic from request", "path", r.URL.Path, "panic", recovered)
+					logger.Error("recovered panic from request",
+						"path", r.URL.Path,
+						"request_id", requestlog.RequestIDFromContext(r.Context()),
+						"panic", recovered,
+					)
 				}
 
 				Write(w, r, Internal(fmt.Errorf("panic: %v", recovered)))

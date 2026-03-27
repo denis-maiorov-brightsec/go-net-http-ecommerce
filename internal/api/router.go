@@ -19,6 +19,7 @@ import (
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/apierror"
 	platformauth "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/auth"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/ratelimit"
+	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/requestlog"
 	producthttp "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/products/http"
 	productsrepository "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/products/repository"
 	productsservice "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/products/service"
@@ -74,7 +75,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	promotionHandler.RegisterProtected(mux, promotionsGuard, writeMiddleware)
 	productHandler.RegisterWithWriteMiddleware(mux, writeMiddleware)
 
-	return apierror.Recover(deps.Logger, apierror.NormalizeServeMux(mux))
+	return requestlog.Middleware(deps.Logger, apierror.Recover(deps.Logger, apierror.NormalizeServeMux(mux)))
 }
 
 func defaultWriteRateLimitRequests(limit int) int {

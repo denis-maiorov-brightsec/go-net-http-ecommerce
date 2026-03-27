@@ -2,6 +2,8 @@ package api
 
 import (
 	"encoding/json"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -9,6 +11,7 @@ import (
 
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/apierror"
 	platformauth "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/auth"
+	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/requestlog"
 )
 
 func TestNewRouterServesVersionedHealth(t *testing.T) {
@@ -27,6 +30,10 @@ func TestNewRouterServesVersionedHealth(t *testing.T) {
 		t.Fatalf("expected Content-Type application/json, got %q", got)
 	}
 
+	if got := rec.Header().Get(requestlog.HeaderName); got == "" {
+		t.Fatalf("expected %s header to be set", requestlog.HeaderName)
+	}
+
 	var body struct {
 		Status string `json:"status"`
 	}
@@ -37,6 +44,28 @@ func TestNewRouterServesVersionedHealth(t *testing.T) {
 
 	if body.Status != "ok" {
 		t.Fatalf("expected status payload %q, got %q", "ok", body.Status)
+	}
+}
+
+func TestNewRouterPreservesIncomingRequestIDHeader(t *testing.T) {
+	t.Parallel()
+
+	router := NewRouter(Dependencies{
+		Logger: slog.New(slog.NewJSONHandler(io.Discard, nil)),
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/health", nil)
+	req.Header.Set(requestlog.HeaderName, "incoming-request-id")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	if got := rec.Header().Get(requestlog.HeaderName); got != "incoming-request-id" {
+		t.Fatalf("expected request id header %q, got %q", "incoming-request-id", got)
 	}
 }
 
