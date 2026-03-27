@@ -34,9 +34,17 @@ func New(service Service) *Handler {
 }
 
 func (h *Handler) Register(mux *http.ServeMux) {
+	h.register(mux, nil)
+}
+
+func (h *Handler) RegisterWithWriteMiddleware(mux *http.ServeMux, middleware func(http.Handler) http.Handler) {
+	h.register(mux, middleware)
+}
+
+func (h *Handler) register(mux *http.ServeMux, writeMiddleware func(http.Handler) http.Handler) {
 	mux.Handle("GET /v1/orders", apierror.Adapt(h.list))
 	mux.Handle("GET /v1/orders/{id}", apierror.Adapt(h.getByID))
-	mux.Handle("POST /v1/orders/{id}/cancel", apierror.Adapt(h.cancel))
+	mux.Handle("POST /v1/orders/{id}/cancel", wrap(apierror.Adapt(h.cancel), writeMiddleware))
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
@@ -163,4 +171,12 @@ func orderIDFromPath(r *http.Request) (int64, error) {
 	}
 
 	return id, nil
+}
+
+func wrap(handler http.Handler, middleware func(http.Handler) http.Handler) http.Handler {
+	if middleware == nil {
+		return handler
+	}
+
+	return middleware(handler)
 }

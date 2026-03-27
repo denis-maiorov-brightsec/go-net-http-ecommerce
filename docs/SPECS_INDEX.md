@@ -19,7 +19,7 @@ This backlog is intentionally sequenced to mimic real ecommerce product work: fe
 | 007 | `/v1/orders/:id/cancel` state transition | 006 | Done |
 | 008 | `/v1/promotions` CRUD | 002 | Done |
 | 009 | Auth middleware stub + protect promotions endpoints | 008 | Done |
-| 010 | Write-route rate limiting middleware | 003, 004, 007, 009 | Blocked |
+| 010 | Write-route rate limiting middleware | 003, 004, 007, 009 | Done |
 | 011 | Request ID + structured request logging middleware | 002 | Blocked |
 | 012 | `/v1/search/products?q=` (reuse products data service) | 003, 005 | Blocked |
 | 013 | Rename `product.sku` -> `product.stockKeepingUnit` | 003, 012 | Blocked |

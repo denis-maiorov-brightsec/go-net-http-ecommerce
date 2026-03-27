@@ -14,6 +14,8 @@ type Config struct {
 	HTTPWriteTimeout        time.Duration
 	HTTPIdleTimeout         time.Duration
 	HTTPShutdownTimeout     time.Duration
+	WriteRateLimitRequests  int
+	WriteRateLimitWindow    time.Duration
 	DatabaseURL             string
 	DatabaseMaxConns        int32
 	DatabaseMinConns        int32
@@ -40,6 +42,22 @@ func Load() (Config, error) {
 	httpShutdownTimeout, err := durationFromEnv("HTTP_SHUTDOWN_TIMEOUT", 10*time.Second)
 	if err != nil {
 		return Config{}, err
+	}
+
+	writeRateLimitWindow, err := durationFromEnv("WRITE_RATE_LIMIT_WINDOW", time.Minute)
+	if err != nil {
+		return Config{}, err
+	}
+	if writeRateLimitWindow <= 0 {
+		return Config{}, fmt.Errorf("WRITE_RATE_LIMIT_WINDOW must be greater than zero")
+	}
+
+	writeRateLimitRequests, err := intFromEnv("WRITE_RATE_LIMIT_REQUESTS", 5)
+	if err != nil {
+		return Config{}, err
+	}
+	if writeRateLimitRequests <= 0 {
+		return Config{}, fmt.Errorf("WRITE_RATE_LIMIT_REQUESTS must be greater than zero")
 	}
 
 	databaseMaxConns, err := int32FromEnv("DATABASE_MAX_CONNS", 10)
@@ -69,6 +87,8 @@ func Load() (Config, error) {
 		HTTPWriteTimeout:        httpWriteTimeout,
 		HTTPIdleTimeout:         httpIdleTimeout,
 		HTTPShutdownTimeout:     httpShutdownTimeout,
+		WriteRateLimitRequests:  writeRateLimitRequests,
+		WriteRateLimitWindow:    writeRateLimitWindow,
 		DatabaseURL:             os.Getenv("DATABASE_URL"),
 		DatabaseMaxConns:        databaseMaxConns,
 		DatabaseMinConns:        databaseMinConns,
@@ -111,4 +131,18 @@ func int32FromEnv(key string, fallback int32) (int32, error) {
 	}
 
 	return int32(parsed), nil
+}
+
+func intFromEnv(key string, fallback int) (int, error) {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback, nil
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", key, err)
+	}
+
+	return parsed, nil
 }

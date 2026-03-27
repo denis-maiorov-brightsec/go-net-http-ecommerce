@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/api"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/apierror"
@@ -240,6 +241,36 @@ func TestListProductsRejectsInvalidPagination(t *testing.T) {
 
 	if len(payload.Error.Details) != 2 {
 		t.Fatalf("expected 2 validation details, got %d", len(payload.Error.Details))
+	}
+}
+
+func TestProductWriteRoutesReturnRateLimitExceeded(t *testing.T) {
+	router := api.NewRouter(*newIntegrationRouterWithRateLimit(t, 1, time.Minute))
+
+	firstReq := httptest.NewRequest(http.MethodDelete, "/v1/products/999", nil)
+	firstRec := httptest.NewRecorder()
+	router.ServeHTTP(firstRec, firstReq)
+
+	if firstRec.Code != http.StatusNotFound {
+		t.Fatalf("expected status %d, got %d", http.StatusNotFound, firstRec.Code)
+	}
+
+	secondReq := httptest.NewRequest(http.MethodDelete, "/v1/products/999", nil)
+	secondRec := httptest.NewRecorder()
+	router.ServeHTTP(secondRec, secondReq)
+
+	if secondRec.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected status %d, got %d", http.StatusTooManyRequests, secondRec.Code)
+	}
+
+	assertIntegrationErrorEnvelope(t, secondRec, secondReq.URL.Path, "RATE_LIMIT_EXCEEDED", "Rate limit exceeded")
+
+	readReq := httptest.NewRequest(http.MethodGet, "/v1/products/999", nil)
+	readRec := httptest.NewRecorder()
+	router.ServeHTTP(readRec, readReq)
+
+	if readRec.Code != http.StatusNotFound {
+		t.Fatalf("expected read status %d, got %d", http.StatusNotFound, readRec.Code)
 	}
 }
 

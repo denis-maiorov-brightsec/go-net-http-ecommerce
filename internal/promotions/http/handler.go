@@ -33,27 +33,40 @@ func New(service Service) *Handler {
 }
 
 func (h *Handler) Register(mux *http.ServeMux) {
-	h.register(mux, nil)
+	h.register(mux, nil, nil)
 }
 
-func (h *Handler) RegisterProtected(mux *http.ServeMux, middleware func(http.Handler) http.Handler) {
-	h.register(mux, middleware)
+func (h *Handler) RegisterProtected(
+	mux *http.ServeMux,
+	authMiddleware func(http.Handler) http.Handler,
+	writeMiddleware func(http.Handler) http.Handler,
+) {
+	h.register(mux, authMiddleware, writeMiddleware)
 }
 
-func (h *Handler) register(mux *http.ServeMux, middleware func(http.Handler) http.Handler) {
-	mux.Handle("GET /v1/promotions", wrap(apierror.Adapt(h.list), middleware))
-	mux.Handle("POST /v1/promotions", wrap(apierror.Adapt(h.create), middleware))
-	mux.Handle("GET /v1/promotions/{id}", wrap(apierror.Adapt(h.getByID), middleware))
-	mux.Handle("PATCH /v1/promotions/{id}", wrap(apierror.Adapt(h.update), middleware))
-	mux.Handle("DELETE /v1/promotions/{id}", wrap(apierror.Adapt(h.delete), middleware))
+func (h *Handler) register(
+	mux *http.ServeMux,
+	authMiddleware func(http.Handler) http.Handler,
+	writeMiddleware func(http.Handler) http.Handler,
+) {
+	mux.Handle("GET /v1/promotions", wrap(apierror.Adapt(h.list), authMiddleware))
+	mux.Handle("POST /v1/promotions", wrap(apierror.Adapt(h.create), authMiddleware, writeMiddleware))
+	mux.Handle("GET /v1/promotions/{id}", wrap(apierror.Adapt(h.getByID), authMiddleware))
+	mux.Handle("PATCH /v1/promotions/{id}", wrap(apierror.Adapt(h.update), authMiddleware, writeMiddleware))
+	mux.Handle("DELETE /v1/promotions/{id}", wrap(apierror.Adapt(h.delete), authMiddleware, writeMiddleware))
 }
 
-func wrap(handler http.Handler, middleware func(http.Handler) http.Handler) http.Handler {
-	if middleware == nil {
-		return handler
+func wrap(handler http.Handler, middlewares ...func(http.Handler) http.Handler) http.Handler {
+	wrapped := handler
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		if middlewares[i] == nil {
+			continue
+		}
+
+		wrapped = middlewares[i](wrapped)
 	}
 
-	return middleware(handler)
+	return wrapped
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {

@@ -34,11 +34,19 @@ func New(service Service) *Handler {
 }
 
 func (h *Handler) Register(mux *http.ServeMux) {
+	h.register(mux, nil)
+}
+
+func (h *Handler) RegisterWithWriteMiddleware(mux *http.ServeMux, middleware func(http.Handler) http.Handler) {
+	h.register(mux, middleware)
+}
+
+func (h *Handler) register(mux *http.ServeMux, writeMiddleware func(http.Handler) http.Handler) {
 	mux.Handle("GET /v1/products", apierror.Adapt(h.list))
-	mux.Handle("POST /v1/products", apierror.Adapt(h.create))
+	mux.Handle("POST /v1/products", wrap(apierror.Adapt(h.create), writeMiddleware))
 	mux.Handle("GET /v1/products/{id}", apierror.Adapt(h.getByID))
-	mux.Handle("PATCH /v1/products/{id}", apierror.Adapt(h.update))
-	mux.Handle("DELETE /v1/products/{id}", apierror.Adapt(h.delete))
+	mux.Handle("PATCH /v1/products/{id}", wrap(apierror.Adapt(h.update), writeMiddleware))
+	mux.Handle("DELETE /v1/products/{id}", wrap(apierror.Adapt(h.delete), writeMiddleware))
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
@@ -152,4 +160,12 @@ func productIDFromPath(r *http.Request) (int64, error) {
 	}
 
 	return id, nil
+}
+
+func wrap(handler http.Handler, middleware func(http.Handler) http.Handler) http.Handler {
+	if middleware == nil {
+		return handler
+	}
+
+	return middleware(handler)
 }

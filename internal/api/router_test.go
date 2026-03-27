@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/apierror"
 	platformauth "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/auth"
@@ -133,6 +134,69 @@ func TestNewRouterLeavesNonProtectedEndpointsAccessible(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, rec.Code)
 	}
+}
+
+func TestNewRouterAppliesRateLimitToWriteRoutesOnly(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, time.March, 27, 12, 0, 0, 0, time.UTC)
+	router := NewRouter(Dependencies{
+		WriteRateLimitRequests: 1,
+		WriteRateLimitWindow:   time.Minute,
+		Now:                    func() time.Time { return now },
+	})
+
+	firstWrite := httptest.NewRequest(http.MethodPost, "/v1/products", nil)
+	firstWrite.RemoteAddr = "192.0.2.1:1234"
+	firstWriteRec := httptest.NewRecorder()
+	router.ServeHTTP(firstWriteRec, firstWrite)
+
+	if firstWriteRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected first write status %d, got %d", http.StatusBadRequest, firstWriteRec.Code)
+	}
+
+	secondWrite := httptest.NewRequest(http.MethodPost, "/v1/products", nil)
+	secondWrite.RemoteAddr = "192.0.2.1:1234"
+	secondWriteRec := httptest.NewRecorder()
+	router.ServeHTTP(secondWriteRec, secondWrite)
+
+	if secondWriteRec.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected second write status %d, got %d", http.StatusTooManyRequests, secondWriteRec.Code)
+	}
+
+	assertRouterErrorEnvelope(t, secondWriteRec, "/v1/products", "RATE_LIMIT_EXCEEDED", "Rate limit exceeded")
+
+	readReq := httptest.NewRequest(http.MethodGet, "/v1/health", nil)
+	readReq.RemoteAddr = "192.0.2.1:1234"
+	readRec := httptest.NewRecorder()
+	router.ServeHTTP(readRec, readReq)
+
+	if readRec.Code != http.StatusOK {
+		t.Fatalf("expected read route to remain unaffected with status %d, got %d", http.StatusOK, readRec.Code)
+	}
+}
+
+func TestNewRouterPreservesPromotionAuthBeforeRateLimit(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, time.March, 27, 12, 0, 0, 0, time.UTC)
+	router := NewRouter(Dependencies{
+		PromotionAuthenticator: platformauth.DefaultStubAuthenticator(),
+		WriteRateLimitRequests: 1,
+		WriteRateLimitWindow:   time.Minute,
+		Now:                    func() time.Time { return now },
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/promotions", nil)
+	req.RemoteAddr = "192.0.2.1:1234"
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status %d, got %d", http.StatusUnauthorized, rec.Code)
+	}
+
+	assertRouterErrorEnvelope(t, rec, "/v1/promotions", "UNAUTHORIZED", "Authentication required")
 }
 
 func TestWriteJSONReturnsEncodingErrorsThroughSharedEnvelope(t *testing.T) {

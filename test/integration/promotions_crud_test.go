@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/api"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/apierror"
@@ -256,6 +257,36 @@ func TestPromotionsRejectAuthenticatedRequestsWithoutPermission(t *testing.T) {
 	}
 
 	assertIntegrationErrorEnvelope(t, rec, req.URL.Path, "FORBIDDEN", "Forbidden")
+}
+
+func TestPromotionWriteRoutesReturnRateLimitExceededWhileReadsRemainAvailable(t *testing.T) {
+	router := api.NewRouter(*newIntegrationRouterWithRateLimit(t, 1, time.Minute))
+
+	firstReq := promotionsRequest(http.MethodDelete, "/v1/promotions/999", nil, "promotions-admin")
+	firstRec := httptest.NewRecorder()
+	router.ServeHTTP(firstRec, firstReq)
+
+	if firstRec.Code != http.StatusNotFound {
+		t.Fatalf("expected status %d, got %d", http.StatusNotFound, firstRec.Code)
+	}
+
+	secondReq := promotionsRequest(http.MethodDelete, "/v1/promotions/999", nil, "promotions-admin")
+	secondRec := httptest.NewRecorder()
+	router.ServeHTTP(secondRec, secondReq)
+
+	if secondRec.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected status %d, got %d", http.StatusTooManyRequests, secondRec.Code)
+	}
+
+	assertIntegrationErrorEnvelope(t, secondRec, secondReq.URL.Path, "RATE_LIMIT_EXCEEDED", "Rate limit exceeded")
+
+	readReq := promotionsRequest(http.MethodGet, "/v1/promotions", nil, "promotions-admin")
+	readRec := httptest.NewRecorder()
+	router.ServeHTTP(readRec, readReq)
+
+	if readRec.Code != http.StatusOK {
+		t.Fatalf("expected read status %d, got %d", http.StatusOK, readRec.Code)
+	}
 }
 
 func promotionsRequest(method, path string, body *strings.Reader, token string) *http.Request {

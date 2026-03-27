@@ -30,6 +30,12 @@ var (
 func newIntegrationRouter(t *testing.T) *api.Dependencies {
 	t.Helper()
 
+	return newIntegrationRouterWithRateLimit(t, 5, time.Minute)
+}
+
+func newIntegrationRouterWithRateLimit(t *testing.T, requests int, window time.Duration) *api.Dependencies {
+	t.Helper()
+
 	pool := integrationDBPool(t)
 	resetIntegrationDatabase(t, pool)
 
@@ -38,6 +44,8 @@ func newIntegrationRouter(t *testing.T) *api.Dependencies {
 	return &api.Dependencies{
 		DB:                     pool,
 		PromotionAuthenticator: authenticator,
+		WriteRateLimitRequests: requests,
+		WriteRateLimitWindow:   window,
 	}
 }
 
