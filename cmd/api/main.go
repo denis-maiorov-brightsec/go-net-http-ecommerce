@@ -30,9 +30,7 @@ func run() error {
 	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	deps := api.Dependencies{
-		Logger: logger,
-	}
+	deps := newDependencies(cfg, logger)
 
 	if cfg.DatabaseURL != "" {
 		pool, openErr := postgres.OpenPool(context.Background(), cfg)
@@ -75,4 +73,12 @@ func run() error {
 	logger.Info("http server stopped")
 
 	return nil
+}
+
+func newDependencies(cfg config.Config, logger *slog.Logger) api.Dependencies {
+	return api.Dependencies{
+		Logger:                 logger,
+		WriteRateLimitRequests: cfg.WriteRateLimitRequests,
+		WriteRateLimitWindow:   cfg.WriteRateLimitWindow,
+	}
 }
