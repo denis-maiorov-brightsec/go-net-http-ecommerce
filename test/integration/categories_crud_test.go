@@ -147,6 +147,34 @@ func TestCreateCategoryRejectsDuplicateSlug(t *testing.T) {
 	}
 }
 
+func TestUpdateCategoryRejectsDuplicateSlug(t *testing.T) {
+	router := api.NewRouter(*newIntegrationRouter(t))
+
+	for _, body := range []string{
+		`{"name":"Furniture","slug":"furniture"}`,
+		`{"name":"Decor","slug":"decor"}`,
+	} {
+		req := httptest.NewRequest(http.MethodPost, "/v1/categories", strings.NewReader(body))
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("expected status %d, got %d", http.StatusCreated, rec.Code)
+		}
+	}
+
+	req := httptest.NewRequest(http.MethodPatch, "/v1/categories/2", strings.NewReader(`{"slug":"furniture"}`))
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected status %d, got %d", http.StatusConflict, rec.Code)
+	}
+
+	assertIntegrationErrorEnvelope(t, rec, req.URL.Path, "CONFLICT", "Category slug already exists")
+}
+
 func TestCategoryNotFoundPaths(t *testing.T) {
 	router := api.NewRouter(*newIntegrationRouter(t))
 

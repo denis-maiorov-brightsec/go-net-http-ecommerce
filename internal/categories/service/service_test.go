@@ -110,6 +110,35 @@ func TestUpdateRejectsEmptyPatch(t *testing.T) {
 	}
 }
 
+func TestUpdateMapsDuplicateSlugToConflict(t *testing.T) {
+	t.Parallel()
+
+	svc := New(repositoryStub{updateErr: categoriesrepository.ErrDuplicateSlug})
+
+	name := "Furniture"
+	slug := "furniture"
+	_, err := svc.Update(context.Background(), 1, categories.UpdateInput{
+		Name: &name,
+		Slug: &slug,
+	})
+	if err == nil {
+		t.Fatal("expected conflict error")
+	}
+
+	var appErr *apierror.Error
+	if !errors.As(err, &appErr) {
+		t.Fatalf("expected api error, got %T", err)
+	}
+
+	if appErr.Status != http.StatusConflict {
+		t.Fatalf("expected status %d, got %d", http.StatusConflict, appErr.Status)
+	}
+
+	if appErr.Code != "CONFLICT" {
+		t.Fatalf("expected code %q, got %q", "CONFLICT", appErr.Code)
+	}
+}
+
 func TestGetByIDMapsMissingCategoryToNotFound(t *testing.T) {
 	t.Parallel()
 
