@@ -22,15 +22,22 @@ type writer interface {
 type Service interface {
 	List(context.Context, orders.ListInput) (orders.ListResult, error)
 	GetByID(context.Context, int64) (orders.Order, error)
+}
+
+type CommandService interface {
 	Cancel(context.Context, int64) (orders.Order, error)
 }
 
 type Handler struct {
-	service Service
+	queryService   Service
+	commandService CommandService
 }
 
-func New(service Service) *Handler {
-	return &Handler{service: service}
+func New(queryService Service, commandService CommandService) *Handler {
+	return &Handler{
+		queryService:   queryService,
+		commandService: commandService,
+	}
 }
 
 func (h *Handler) Register(mux *http.ServeMux) {
@@ -58,7 +65,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	items, err := h.service.List(r.Context(), orders.ListInput{
+	items, err := h.queryService.List(r.Context(), orders.ListInput{
 		Page:   params.Page,
 		Limit:  params.Limit,
 		Status: filters.Status,
@@ -86,7 +93,7 @@ func (h *Handler) getByID(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	item, err := h.service.GetByID(r.Context(), id)
+	item, err := h.queryService.GetByID(r.Context(), id)
 	if err != nil {
 		return err
 	}
@@ -100,7 +107,7 @@ func (h *Handler) cancel(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	item, err := h.service.Cancel(r.Context(), id)
+	item, err := h.commandService.Cancel(r.Context(), id)
 	if err != nil {
 		return err
 	}

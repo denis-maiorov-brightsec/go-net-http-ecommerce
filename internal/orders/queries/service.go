@@ -1,4 +1,4 @@
-package service
+package queries
 
 import (
 	"context"
@@ -6,21 +6,19 @@ import (
 	"strings"
 
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/orders"
-	ordersrepository "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/orders/repository"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/apierror"
 )
 
-type Repository interface {
+type Reader interface {
 	List(context.Context, orders.ListInput) (orders.ListResult, error)
 	GetByID(context.Context, int64) (orders.Order, error)
-	Cancel(context.Context, int64) (orders.Order, error)
 }
 
 type Service struct {
-	repo Repository
+	repo Reader
 }
 
-func New(repo Repository) *Service {
+func NewService(repo Reader) *Service {
 	return &Service{repo: repo}
 }
 
@@ -44,28 +42,8 @@ func (s *Service) GetByID(ctx context.Context, id int64) (orders.Order, error) {
 
 	item, err := s.repo.GetByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, ordersrepository.ErrNotFound) {
+		if errors.Is(err, ErrNotFound) {
 			return orders.Order{}, apierror.NotFound("Order not found")
-		}
-
-		return orders.Order{}, apierror.Internal(err)
-	}
-
-	return item, nil
-}
-
-func (s *Service) Cancel(ctx context.Context, id int64) (orders.Order, error) {
-	if err := validateID(id); err != nil {
-		return orders.Order{}, err
-	}
-
-	item, err := s.repo.Cancel(ctx, id)
-	if err != nil {
-		if errors.Is(err, ordersrepository.ErrNotFound) {
-			return orders.Order{}, apierror.NotFound("Order not found")
-		}
-		if errors.Is(err, ordersrepository.ErrIneligibleStatus) {
-			return orders.Order{}, apierror.New(409, "CONFLICT", "Order cannot be cancelled from current status", nil)
 		}
 
 		return orders.Order{}, apierror.Internal(err)

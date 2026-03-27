@@ -13,9 +13,9 @@ import (
 	categoryhttp "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/categories/http"
 	categoriesrepository "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/categories/repository"
 	categoriesservice "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/categories/service"
+	orderscommands "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/orders/commands"
 	ordershttp "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/orders/http"
-	ordersrepository "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/orders/repository"
-	ordersservice "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/orders/service"
+	ordersqueries "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/orders/queries"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/apierror"
 	platformauth "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/auth"
 	"github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/platform/ratelimit"
@@ -48,7 +48,10 @@ type deprecatedRootResponse struct {
 func NewRouter(deps Dependencies) http.Handler {
 	mux := http.NewServeMux()
 	categoryHandler := categoryhttp.New(categoriesservice.New(categoriesrepository.New(deps.DB)))
-	orderHandler := ordershttp.New(ordersservice.New(ordersrepository.New(deps.DB)))
+	orderHandler := ordershttp.New(
+		ordersqueries.NewService(ordersqueries.NewRepository(deps.DB)),
+		orderscommands.NewService(orderscommands.NewRepository(deps.DB)),
+	)
 	promotionHandler := promotionshttp.New(promotionsservice.New(promotionsrepository.New(deps.DB)))
 	productHandler := producthttp.New(productsservice.New(productsrepository.New(deps.DB)))
 	promotionAuth := deps.PromotionAuthenticator
