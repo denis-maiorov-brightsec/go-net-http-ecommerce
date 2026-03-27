@@ -19,6 +19,9 @@ import (
 	producthttp "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/products/http"
 	productsrepository "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/products/repository"
 	productsservice "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/products/service"
+	promotionshttp "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/promotions/http"
+	promotionsrepository "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/promotions/repository"
+	promotionsservice "github.com/denis-maiorov-brightsec/go-net-http-ecommerce/internal/promotions/service"
 )
 
 type Dependencies struct {
@@ -38,6 +41,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	mux := http.NewServeMux()
 	categoryHandler := categoryhttp.New(categoriesservice.New(categoriesrepository.New(deps.DB)))
 	orderHandler := ordershttp.New(ordersservice.New(ordersrepository.New(deps.DB)))
+	promotionHandler := promotionshttp.New(promotionsservice.New(promotionsrepository.New(deps.DB)))
 	productHandler := producthttp.New(productsservice.New(productsrepository.New(deps.DB)))
 
 	mux.Handle("GET /v1/health", apierror.Adapt(func(w http.ResponseWriter, r *http.Request) error {
@@ -51,6 +55,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	}))
 	categoryHandler.Register(mux)
 	orderHandler.Register(mux)
+	promotionHandler.Register(mux)
 	productHandler.Register(mux)
 
 	return apierror.Recover(deps.Logger, apierror.NormalizeServeMux(mux))
