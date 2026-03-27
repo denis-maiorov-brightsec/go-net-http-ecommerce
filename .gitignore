@@ -1,0 +1,142 @@
+# -----------------------------
+# OS / Filesystem
+# -----------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.Spotlight-V100/
+.Trashes/
+._*
+
+# -----------------------------
+# Editors / IDEs
+# -----------------------------
+.vscode/
+.idea/
+*.iml
+*.suo
+*.user
+*.userossc
+*.sln.docstates
+*.swp
+*.swo
+*~
+
+# -----------------------------
+# Environment / Secrets
+# -----------------------------
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.crt
+
+# -----------------------------
+# Logs / Runtime
+# -----------------------------
+*.log
+*.out
+*.err
+*.pid
+*.pid.lock
+logs/
+
+# -----------------------------
+# Caches / Temp
+# -----------------------------
+.cache/
+.tmp/
+.temp/
+tmp/
+temp/
+*.tmp
+
+# -----------------------------
+# Test / Coverage
+# -----------------------------
+coverage/
+.nyc_output/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+
+# -----------------------------
+# Node / JavaScript / TypeScript
+# -----------------------------
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+.parcel-cache/
+.next/
+.nuxt/
+.svelte-kit/
+.vercel/
+vite.svg
+*.tsbuildinfo
+
+# -----------------------------
+# Python
+# -----------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+ENV/
+env/
+.eggs/
+*.egg-info/
+
+# -----------------------------
+# Go
+# -----------------------------
+bin/
+.coverprofile
+
+# -----------------------------
+# Rust
+# -----------------------------
+target/
+
+# -----------------------------
+# Java / Kotlin
+# -----------------------------
+.gradle/
+out/
+
+# -----------------------------
+# .NET
+# -----------------------------
+obj/
+
+# -----------------------------
+# C / C++ / CMake
+# -----------------------------
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+
+# -----------------------------
+# Build / Dist (generic)
+# -----------------------------
+dist/
+build/
+release/
+debug/
+
+# -----------------------------
+# Tooling
+# -----------------------------
+.codex-runs/

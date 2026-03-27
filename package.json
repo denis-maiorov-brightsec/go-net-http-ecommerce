@@ -1,0 +1,8 @@
+{
+  "name": "spec-driven-scaffold-template",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "specs:auto": "node scripts/run-specs-harness.mjs"
+  }
+}
